@@ -75,16 +75,16 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                  InlineKeyboardButton("ᴀʙᴏᴜᴛ", callback_data='about')]
             ])
         )
-
+#Premium Massage 
     elif data == "premium":
         await query.message.delete()
         await client.send_message(
             chat_id=query.message.chat.id,
             text=(
-                f"Hello {query.from_user.first_name} 👋\n\n"
-                f"Here You Buy Premium Membership Of This Bot.\n"
-                f"Some Plan Are Given Below Click On Them To Proceed."
-            ),
+                  f"ʜᴇʟʟᴏ {query.from_user.first_name} 👋\n\n"
+                  f"ʜᴇʀᴇ ʏᴏᴜ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ ᴍᴇᴍʙᴇʀꜱʜɪᴘ ᴏꜰ ᴛʜɪꜱ ʙᴏᴛ.\n"
+                  f"ꜱᴏᴍᴇ ᴘʟᴀɴ ᴀʀᴇ ɢɪᴠᴇɴ ʙᴇʟᴏᴡ ᴄʟɪᴄᴋ ᴏɴ ᴛʜᴇᴍ ᴛᴏ ᴘʀᴏᴄᴇᴇᴅ."
+                  ),
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("🧪 Test - 1 ₹ 1 Min", callback_data="plan_test_1")
@@ -141,21 +141,19 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         # Generate QR Code using API
         qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={urllib.parse.quote(upi_url)}"
         
-        try:
-            await query.message.delete()
-            await client.send_photo(
-                chat_id=query.message.chat.id,
-                photo=qr_api_url,
-                caption=(
-                    f"💎 <b>{plan_name} Premium Plan</b>\n\n"
-                    f"💰 <b>Price:</b> {price} ₹\n"
-                    f"⏰ <b>Duration:</b> {plan_name}\n\n"
-                    f"📱 <b>Payment Instructions:</b>\n"
-                    f"1️⃣ <b>Pay {price} ₹ to the UPI ID below</b>\n"
-                    f"2️⃣ <b>Take a screenshot of payment</b>\n"
-                    f"3️⃣ <b>Send screenshot to admin</b>"
-                ),
-                reply_markup=InlineKeyboardMarkup([
+     try:
+    await query.message.delete()
+    await client.send_photo(
+        chat_id=query.message.chat.id,
+        photo=qr_api_url,
+        caption=(
+            f"<b>{plan_name} ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ</b>\n\n"
+            f"<b>ᴘʀɪᴄᴇ:</b> {price} ₹\n"
+            f"<b>ᴅᴜʀᴀᴛɪᴏɴ:</b> {plan_name}\n\n"
+            f"<b>ᴘᴀʏᴍᴇɴᴛ ɪɴꜱᴛʀᴜᴄᴛɪᴏɴꜱ:</b>\n"
+            f"<b>ᴘᴀʏ {price} ₹ ᴛᴏ ᴛʜᴇ ɢɪᴠᴇɴ Qʀ ᴄᴏᴅᴇ ᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ <u>I ʜᴀᴠᴇ ᴘᴀɪᴅ</u>.</b>\n")
+                 ),
+                   reply_markup=InlineKeyboardMarkup([
                     [
                         InlineKeyboardButton("💰 I Have Paid", callback_data=f"paid_{days}_{price}")
                     ],
@@ -168,23 +166,21 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         except Exception as e:
             # Fallback if QR generation fails
             await query.message.edit_text(
-                text=(
-                    f"💎 <b>{plan_name} Premium Plan</b>\n\n"
-                    f"💰 <b>Price:</b> {price} ₹\n"
-                    f"⏰ <b>Duration:</b> {plan_name}\n\n"
-                    f"📱 <b>Payment Instructions:</b>\n"
-                    f"1️⃣ <b>Pay {price} ₹ to UPI ID: singhzerotwo@fam</b>\n"
-                    f"2️⃣ <b>Take a screenshot of payment</b>\n"
-                    f"3️⃣ <b>Send screenshot to admin</b>\n\n"
-                    f"⚠️ <b>QR Code generation failed. Please pay manually.</b>"
-                ),
+    text=(
+        f"<b>{plan_name} ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ</b>\n\n"
+        f"<b>ᴘʀɪᴄᴇ:</b> {price} ₹\n"
+        f"<b>ᴅᴜʀᴀᴛɪᴏɴ:</b> {plan_name}\n\n"
+        f"<b>ᴘᴀʏᴍᴇɴᴛ ɪɴꜱᴛʀᴜᴄᴛɪᴏɴꜱ:</b>\n"
+        f"<b>ᴘᴀʏ {price} ₹ ᴛᴏ ᴜᴘɪ ɪᴅ:</b> singhzerotwo@fam\n\n"
+        f"<b>Qʀ ᴄᴏᴅᴇ ɢᴇɴᴇʀᴀᴛɪᴏɴ ꜰᴀɪʟᴇᴅ. ᴘʟᴇᴀꜱᴇ ᴘᴀʏ ᴍᴀɴᴜᴀʟʟʏ.</b>")
+),
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("💰 I Have Paid", callback_data=f"paid_{days}_{price}")
+                        InlineKeyboardButton("I Have Paid", callback_data=f"paid_{days}_{price}")
                     ],
                     [
-                        InlineKeyboardButton("🔙 Back to Plans", callback_data="premium"),
-                        InlineKeyboardButton("🏠 Home", callback_data="start")
+                        InlineKeyboardButton("Back to Plans", callback_data="premium"),
+                        InlineKeyboardButton("Home", callback_data="start")
                     ]
                 ])
             )
@@ -226,15 +222,6 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 ]
             ])
         )
-
-    # --- REMOVE/COMMENT OUT ADMIN APPROVE/REJECT HANDLERS ---
-    # elif data.startswith("approve_"):
-    #     # Approval handler removed
-    #     pass
-
-    # elif data.startswith("reject_"):
-    #     # Rejection handler removed
-    #     pass
 
     elif data == "close":
         await query.message.delete()
