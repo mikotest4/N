@@ -59,17 +59,14 @@ async def start_command(client: Client, message: Message):
     else:
         verify_status = await db.get_verify_status(id)
 
-        # NOW check token verification (only after force sub is satisfied)
+        # === NEW: Enhanced verification check (individual timer OR daily reset) ===
         if SHORTLINK_URL or SHORTLINK_API:
-            # Fix: Ensure verified_time is a number before comparison
-            verified_time = verify_status.get('verified_time', 0)
-            try:
-                verified_time = float(verified_time) if verified_time else 0
-            except (ValueError, TypeError):
-                verified_time = 0
+            from helper_func import is_verification_expired
 
-            if verify_status['is_verified'] and VERIFY_EXPIRE < (time.time() - verified_time):
+            # Check if verification is expired (either by timer or daily reset)
+            if await is_verification_expired(user_id, verify_status):
                 await db.update_verify_status(user_id, is_verified=False)
+                verify_status['is_verified'] = False
 
             # ===================== Token Verification =====================
             if "verify_" in message.text:
@@ -239,7 +236,7 @@ async def start_command(client: Client, message: Message):
             try:
                 parts = message.text.split(maxsplit=1)
                 if len(parts) > 1:
-                    reload_url = f"https://t.me/{client.username}?start={parts[1]}"
+                    reload_url = f"<https://t.me/{client.username}?start={parts>[1]}"
                 else:
                     reload_url = f"https://t.me/{client.username}"
                 keyboard = InlineKeyboardMarkup(
@@ -347,7 +344,7 @@ async def not_joined(client: Client, message: Message):
         try:
             parts = message.text.split(maxsplit=1)
             if len(parts) > 1:
-                retry_url = f"https://t.me/{client.username}?start={parts[1]}"
+                retry_url = f"<https://t.me/{client.username}?start={parts>[1]}"
             else:
                 retry_url = f"https://t.me/{client.username}"
             buttons.append([
