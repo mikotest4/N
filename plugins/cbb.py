@@ -1,4 +1,4 @@
-from pyrogram import Client 
+from pyrogram import Client
 from bot import Bot
 from config import *
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
@@ -27,17 +27,17 @@ async def add_premium_user_to_db(user_id: int, days: str):
         else:
             time_value = int(days)
             time_unit = "d"
-        
+
         # Add premium using db_premium function
         expiration_time = await add_premium(user_id, time_value, time_unit)
-        
+
         if expiration_time:
             # Parse the expiration time string to datetime object
             ist = timezone("Asia/Kolkata")
             expiration_datetime = datetime.fromisoformat(expiration_time).astimezone(ist)
             return True, expiration_datetime
         return False, None
-        
+
     except Exception as e:
         print(f"Error in add_premium_user_to_db: {e}")
         return False, None
@@ -76,14 +76,15 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             ])
         )
 
+    # Premium Message
     elif data == "premium":
         await query.message.delete()
         await client.send_message(
             chat_id=query.message.chat.id,
             text=(
-                f"Hello {query.from_user.first_name} 👋\n\n"
-                f"Here You Buy Premium Membership Of This Bot.\n"
-                f"Some Plan Are Given Below Click On Them To Proceed."
+                f"ʜᴇʟʟᴏ {query.from_user.first_name} 👋\n\n"
+                f"ʜᴇʀᴇ ʏᴏᴜ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ ᴍᴇᴍʙᴇʀꜱʜɪᴘ ᴏꜰ ᴛʜɪꜱ ʙᴏᴛ.\n"
+                f"ꜱᴏᴍᴇ ᴘʟᴀɴ ᴀʀᴇ ɢɪᴠᴇɴ ʙᴇʟᴏᴡ ᴄʟɪᴄᴋ ᴏɴ ᴛʜᴇᴍ ᴛᴏ ᴘʀᴏᴄᴇᴇᴅ."
             ),
             reply_markup=InlineKeyboardMarkup([
                 [
@@ -109,7 +110,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
     elif data.startswith("plan_"):
         # Extract plan details from callback data
         parts = data.split("_")
-        
+
         if parts[1] == "test":
             # Test plan
             days = "test"
@@ -118,42 +119,40 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         else:
             days = parts[1]
             price = parts[2]
-            
+
             # Plan name mapping
             plan_names = {
                 "7": "7 Days",
-                "30": "1 Month", 
+                "30": "1 Month",
                 "90": "3 Months",
                 "180": "6 Months",
                 "365": "1 Year"
             }
-            
+
             plan_name = plan_names.get(days, f"{days} Days")
-        
+
         # Generate UPI QR Code
         upi_id = "singhzerotwo@fam"
         amount = price
         note = f"{plan_name} Premium Plan"
-        
+
         # Create UPI payment URL
         upi_url = f"upi://pay?pa={upi_id}&pn={urllib.parse.quote(note)}&am={amount}&cu=INR"
-        
+
         # Generate QR Code using API
         qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={urllib.parse.quote(upi_url)}"
-        
+
         try:
             await query.message.delete()
             await client.send_photo(
                 chat_id=query.message.chat.id,
                 photo=qr_api_url,
                 caption=(
-                    f"💎 <b>{plan_name} Premium Plan</b>\n\n"
-                    f"💰 <b>Price:</b> {price} ₹\n"
-                    f"⏰ <b>Duration:</b> {plan_name}\n\n"
-                    f"📱 <b>Payment Instructions:</b>\n"
-                    f"1️⃣ <b>Pay {price} ₹ to the UPI ID below</b>\n"
-                    f"2️⃣ <b>Take a screenshot of payment</b>\n"
-                    f"3️⃣ <b>Send screenshot to admin</b>"
+                    f"<b>{plan_name} ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ</b>\n\n"
+                    f"<b>ᴘʀɪᴄᴇ:</b> {price} ₹\n"
+                    f"<b>ᴅᴜʀᴀᴛɪᴏɴ:</b> {plan_name}\n\n"
+                    f"<b>ᴘᴀʏᴍᴇɴᴛ ɪɴꜱᴛʀᴜᴄᴛɪᴏɴꜱ:</b>\n"
+                    f"<b>ᴘᴀʏ {price} ₹ ᴛᴏ ᴛʜᴇ ɢɪᴠᴇɴ Qʀ ᴄᴏᴅᴇ ᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ <u>I ʜᴀᴠᴇ ᴘᴀɪᴅ</u>.</b>\n"
                 ),
                 reply_markup=InlineKeyboardMarkup([
                     [
@@ -169,22 +168,20 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             # Fallback if QR generation fails
             await query.message.edit_text(
                 text=(
-                    f"💎 <b>{plan_name} Premium Plan</b>\n\n"
-                    f"💰 <b>Price:</b> {price} ₹\n"
-                    f"⏰ <b>Duration:</b> {plan_name}\n\n"
-                    f"📱 <b>Payment Instructions:</b>\n"
-                    f"1️⃣ <b>Pay {price} ₹ to UPI ID: singhzerotwo@fam</b>\n"
-                    f"2️⃣ <b>Take a screenshot of payment</b>\n"
-                    f"3️⃣ <b>Send screenshot to admin</b>\n\n"
-                    f"⚠️ <b>QR Code generation failed. Please pay manually.</b>"
+                    f"<b>{plan_name} ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ</b>\n\n"
+                    f"<b>ᴘʀɪᴄᴇ:</b> {price} ₹\n"
+                    f"<b>ᴅᴜʀᴀᴛɪᴏɴ:</b> {plan_name}\n\n"
+                    f"<b>ᴘᴀʏᴍᴇɴᴛ ɪɴꜱᴛʀᴜᴄᴛɪᴏɴꜱ:</b>\n"
+                    f"<b>ᴘᴀʏ {price} ₹ ᴛᴏ ᴜᴘɪ ɪᴅ:</b> singhzerotwo@fam\n\n"
+                    f"<b>Qʀ ᴄᴏᴅᴇ ɢᴇɴᴇʀᴀᴛɪᴏɴ ꜰᴀɪʟᴇᴅ. ᴘʟᴇᴀꜱᴇ ᴘᴀʏ ᴍᴀɴᴜᴀʟʟʏ.</b>"
                 ),
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("💰 I Have Paid", callback_data=f"paid_{days}_{price}")
+                        InlineKeyboardButton("I Have Paid", callback_data=f"paid_{days}_{price}")
                     ],
                     [
-                        InlineKeyboardButton("🔙 Back to Plans", callback_data="premium"),
-                        InlineKeyboardButton("🏠 Home", callback_data="start")
+                        InlineKeyboardButton("Back to Plans", callback_data="premium"),
+                        InlineKeyboardButton("Home", callback_data="start")
                     ]
                 ])
             )
@@ -194,31 +191,31 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         parts = data.split("_")
         days = parts[1]
         price = parts[2]
-        
+
         # Plan name mapping
         if days == "test":
             plan_name = "Test Plan (1 Min)"
         else:
             plan_names = {
                 "7": "7 Days",
-                "30": "1 Month", 
+                "30": "1 Month",
                 "90": "3 Months",
                 "180": "6 Months",
                 "365": "1 Year"
             }
             plan_name = plan_names.get(days, f"{days} Days")
-        
+
         # Store payment session
         payment_sessions[query.from_user.id] = {
             "days": days,
             "price": price,
             "plan_name": plan_name
         }
-        
+
         await query.message.edit_text(
             text=(
-                f"📸 <b>Please send your payment screenshot now.</b>\n\n"
-                f"⏰ <b>You have 5 minutes to send the screenshot.</b>"
+                f"📸 <b>ᴘʟᴇᴀꜱᴇ ꜱᴇɴᴅ ʏᴏᴜʀ ᴘᴀʏᴍᴇɴᴛ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ ɴᴏᴡ.</b>\n\n"
+                f"⏰ <b>ʏᴏᴜ ʜᴀᴠᴇ 5 ᴍɪɴᴜᴛᴇꜱ ᴛᴏ ꜱᴇɴᴅ ᴛʜᴇ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ.</b>"
             ),
             reply_markup=InlineKeyboardMarkup([
                 [
@@ -226,15 +223,6 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 ]
             ])
         )
-
-    # --- REMOVE/COMMENT OUT ADMIN APPROVE/REJECT HANDLERS ---
-    # elif data.startswith("approve_"):
-    #     # Approval handler removed
-    #     pass
-
-    # elif data.startswith("reject_"):
-    #     # Rejection handler removed
-    #     pass
 
     elif data == "close":
         await query.message.delete()
@@ -312,36 +300,36 @@ async def cb_handler(client: Bot, query: CallbackQuery):
 @Bot.on_message(filters.photo & filters.private)
 async def handle_payment_screenshot(client: Bot, message: Message):
     user_id = message.from_user.id
-    
+
     # Check if user has an active payment session
     if user_id in payment_sessions:
         session = payment_sessions[user_id]
-        
+
         # Get user details
         username = f"@{message.from_user.username}" if message.from_user.username else "No Username"
         user_id_mono = f"<code>{user_id}</code>"
         plan_info = f"{session['plan_name']} - {session['price']} ₹"
-        
+
         # Send confirmation to user
         await message.reply_text(
             text=(
-                f"✅ <b>Payment screenshot received!</b>\n\n"
-                f"Your payment is being verified by admin.\n"
-                f"You will get premium access once verified.\n\n"
-                f"Thank you for your purchase! 🎉"
+                f"✅ <b>ᴘᴀʏᴍᴇɴᴛ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ ʀᴇᴄᴇɪᴠᴇᴅ!</b>\n\n"
+                f"ʏᴏᴜʀ ᴘᴀʏᴍᴇɴᴛ ɪꜱ ʙᴇɪɴɢ ᴠᴇʀɪꜰɪᴇᴅ ʙʏ ᴀᴅᴍɪɴ.\n"
+                f"ʏᴏᴜ ᴡɪʟʟ ɢᴇᴛ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ ᴏɴᴄᴇ ᴠᴇʀɪꜰɪᴇᴅ.\n\n"
+                f"ᴛʜᴀɴᴋ ʏᴏᴜ ꜰᴏʀ ʏᴏᴜʀ ᴘᴜʀᴄʜᴀꜱᴇ! 🎉"
             )
         )
-        
+
         # Forward screenshot to owner with payment info (NO APPROVE/REJECT BUTTONS)
         try:
             await client.send_photo(
                 chat_id=OWNER_ID,
                 photo=message.photo.file_id,
                 caption=(
-                    f"💰 <b>Payment Information</b>\n\n"
-                    f"👤 <b>Username:</b> {username}\n"
-                    f"🆔 <b>User ID:</b> {user_id_mono}\n"
-                    f"💳 <b>Payment Selected:</b> {plan_info}\n"
+                    f"<b>Payment Information</b>\n\n"
+                    f"<b>Username:</b> {username}\n"
+                    f"<b>User ID:</b> {user_id_mono}\n"
+                    f"<b>Payment Selected:</b> {plan_info}\n"
                 )
                 # No reply_markup here!
             )
@@ -352,10 +340,10 @@ async def handle_payment_screenshot(client: Bot, message: Message):
                     f"Please contact admin manually: {OWNER_TAG}"
                 )
             )
-        
+
         # Remove session after processing
         del payment_sessions[user_id]
-    
+
     else:
         # Regular photo message - ignore or handle as needed
         pass
