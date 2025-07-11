@@ -117,8 +117,8 @@ async def start_command(client: Client, message: Message):
             if not verify_status['is_verified'] and not is_premium:
                 token = ''.join(random.choices(rohit.ascii_letters + rohit.digits, k=10))
                 
-                # Generate shortlink first
-                link = await get_shortlink(SHORTLINK_URL, SHORTLINK_API, f'https://telegram.dog/{client.username}?start=verify_{token}')
+                # Generate shortlink first (CHANGED HERE)
+                link = await get_shortlink(f'https://telegram.dog/{client.username}?start=verify_{token}')
                 
                 # Update database with both token and link
                 await db.update_verify_status(id, verify_token=token, link=link)
