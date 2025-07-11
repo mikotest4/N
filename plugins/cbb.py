@@ -199,6 +199,86 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             ])
         )
 
+    # Admin approval/rejection handlers
+    elif data.startswith("approve_"):
+        # Check if user is owner
+        if query.from_user.id != OWNER_ID:
+            await query.answer("❌ Only owner can approve payments!", show_alert=True)
+            return
+            
+        parts = data.split("_")
+        user_id = int(parts[1])
+        days = parts[2]
+        
+        try:
+            # Add premium user to database using db_premium function
+            success, expiration_time = await add_premium_user_to_db(user_id, days)
+            
+            if success:
+                # Calculate duration text
+                if days == "test":
+                    duration_text = "1 minute"
+                else:
+                    duration_text = f"{days} days"
+                
+                expiration_str = expiration_time.strftime("%d-%m-%Y %I:%M %p")
+                
+                # Send success message to user
+                await client.send_message(
+                    chat_id=user_id,
+                    text=(
+                        f"🎉 <b>Payment Approved!</b>\n\n"
+                        f"✅ <b>Your premium membership has been activated.</b>\n"
+                        f"⏰ <b>Valid until:</b> {expiration_str} IST\n"
+                        f"⌛ <b>Duration:</b> {duration_text}\n\n"
+                        f"Enjoy your premium features! ✨"
+                    )
+                )
+                
+                # Update admin message
+                await query.message.edit_caption(
+                    caption=query.message.caption + f"\n\n✅ <b>APPROVED</b> by admin\n🎯 <b>Premium activated for {duration_text}</b>",
+                    reply_markup=None
+                )
+                
+                await query.answer("✅ Payment approved and premium activated successfully!", show_alert=True)
+            else:
+                await query.answer("❌ Failed to add premium to database!", show_alert=True)
+            
+        except Exception as e:
+            await query.answer("❌ Error approving payment!", show_alert=True)
+            print(f"Error in approval: {e}")
+
+    elif data.startswith("reject_"):
+        # Check if user is owner
+        if query.from_user.id != OWNER_ID:
+            await query.answer("❌ Only owner can reject payments!", show_alert=True)
+            return
+            
+        parts = data.split("_")
+        user_id = int(parts[1])
+        
+        try:
+            await client.send_message(
+                chat_id=user_id,
+                text=(
+                    f"❌ <b>Payment Rejected!</b>\n\n"
+                    f"Your payment screenshot was not verified.\n"
+                    f"Please contact admin: {OWNER_TAG}"
+                )
+            )
+            
+            # Update admin message
+            await query.message.edit_caption(
+                caption=query.message.caption + f"\n\n❌ <b>REJECTED</b> by admin",
+                reply_markup=None
+            )
+            
+            await query.answer("❌ Payment rejected successfully!", show_alert=True)
+            
+        except Exception as e:
+            await query.answer("❌ Error rejecting payment!", show_alert=True)
+
     elif data == "close":
         await query.message.delete()
         try:
@@ -327,119 +407,3 @@ async def handle_payment_screenshot(client: Bot, message: Message):
     else:
         # Regular photo message - ignore or handle as needed
         pass
-
-# Function to add premium user to database
-async def add_premium_user_to_db(user_id, days):
-    try:
-        # Calculate expiration date
-        ist = timezone("Asia/Kolkata")
-        current_time = datetime.now(ist)
-        
-        # Handle test plan (1 minute)
-        if days == "test":
-            expiration_time = current_time + timedelta(minutes=1)
-        else:
-            expiration_time = current_time + timedelta(days=int(days))
-        
-        # Format expiration timestamp
-        expiration_timestamp = expiration_time.isoformat()
-        
-        # Check if user already exists in premium collection
-        existing_user = await collection.find_one({"user_id": user_id})
-        
-        if existing_user:
-            # Update existing user's expiration time
-            await collection.update_one(
-                {"user_id": user_id},
-                {"$set": {"expiration_timestamp": expiration_timestamp}}
-            )
-        else:
-            # Add new premium user
-            await collection.insert_one({
-                "user_id": user_id,
-                "expiration_timestamp": expiration_timestamp
-            })
-        
-        return True
-    except Exception as e:
-        print(f"Error adding premium user to DB: {e}")
-        return False
-
-# Handler for admin approval/rejection
-@Bot.on_callback_query(filters.user(OWNER_ID))
-async def handle_admin_payment_actions(client: Bot, query: CallbackQuery):
-    data = query.data
-    
-    if data.startswith("approve_"):
-        parts = data.split("_")
-        user_id = int(parts[1])
-        days = parts[2]
-        
-        try:
-            # Add premium user to database
-            success = await add_premium_user_to_db(user_id, days)
-            
-            if success:
-                # Calculate expiration date for display
-                ist = timezone("Asia/Kolkata")
-                current_time = datetime.now(ist)
-                
-                if days == "test":
-                    expiration_time = current_time + timedelta(minutes=1)
-                    duration_text = "1 minute"
-                else:
-                    expiration_time = current_time + timedelta(days=int(days))
-                    duration_text = f"{days} days"
-                
-                expiration_str = expiration_time.strftime("%d-%m-%Y %I:%M %p")
-                
-                # Send success message to user
-                await client.send_message(
-                    chat_id=user_id,
-                    text=(
-                        f"🎉 <b>Payment Approved!</b>\n\n"
-                        f"✅ <b>Your premium membership has been activated.</b>\n"
-                        f"⏰ <b>Valid until:</b> {expiration_str} IST\n"
-                        f"⌛ <b>Duration:</b> {duration_text}\n\n"
-                        f"Enjoy your premium features! ✨"
-                    )
-                )
-                
-                # Update admin message
-                await query.message.edit_caption(
-                    caption=query.message.caption + f"\n\n✅ <b>APPROVED</b> by admin\n🎯 <b>Premium activated for {duration_text}</b>",
-                    reply_markup=None
-                )
-                
-                await query.answer("Payment approved and premium activated!", show_alert=True)
-            else:
-                await query.answer("Failed to add premium to database!", show_alert=True)
-            
-        except Exception as e:
-            await query.answer("Failed to approve payment!", show_alert=True)
-            print(f"Error in approval: {e}")
-    
-    elif data.startswith("reject_"):
-        parts = data.split("_")
-        user_id = int(parts[1])
-        
-        try:
-            await client.send_message(
-                chat_id=user_id,
-                text=(
-                    f"❌ <b>Payment Rejected!</b>\n\n"
-                    f"Your payment screenshot was not verified.\n"
-                    f"Please contact admin: {OWNER_TAG}"
-                )
-            )
-            
-            # Update admin message
-            await query.message.edit_caption(
-                caption=query.message.caption + f"\n\n❌ <b>REJECTED</b> by admin",
-                reply_markup=None
-            )
-            
-            await query.answer("Payment rejected!", show_alert=True)
-            
-        except Exception as e:
-            await query.answer("Failed to reject payment!", show_alert=True)
