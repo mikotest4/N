@@ -59,14 +59,17 @@ async def start_command(client: Client, message: Message):
     else:
         verify_status = await db.get_verify_status(id)
 
-        # === NEW: Enhanced verification check (individual timer OR daily reset) ===
+        # NOW check token verification (only after force sub is satisfied)
         if SHORTLINK_URL or SHORTLINK_API:
-            from helper_func import is_verification_expired
+            # Fix: Ensure verified_time is a number before comparison
+            verified_time = verify_status.get('verified_time', 0)
+            try:
+                verified_time = float(verified_time) if verified_time else 0
+            except (ValueError, TypeError):
+                verified_time = 0
 
-            # Check if verification is expired (either by timer or daily reset)
-            if await is_verification_expired(user_id, verify_status):
+            if verify_status['is_verified'] and VERIFY_EXPIRE < (time.time() - verified_time):
                 await db.update_verify_status(user_id, is_verified=False)
-                verify_status['is_verified'] = False
 
             # ===================== Token Verification =====================
             if "verify_" in message.text:
@@ -117,8 +120,8 @@ async def start_command(client: Client, message: Message):
             if not verify_status['is_verified'] and not is_premium:
                 token = ''.join(random.choices(rohit.ascii_letters + rohit.digits, k=10))
                 
-                # Generate shortlink first (CHANGED HERE)
-                link = await get_shortlink(f'https://telegram.dog/{client.username}?start=verify_{token}')
+                # Generate shortlink first
+                link = await get_shortlink(SHORTLINK_URL, SHORTLINK_API, f'https://telegram.dog/{client.username}?start=verify_{token}')
                 
                 # Update database with both token and link
                 await db.update_verify_status(id, verify_token=token, link=link)
@@ -236,7 +239,7 @@ async def start_command(client: Client, message: Message):
             try:
                 parts = message.text.split(maxsplit=1)
                 if len(parts) > 1:
-                    reload_url = f"<https://t.me/{client.username}?start={parts>[1]}"
+                    reload_url = f"https://t.me/{client.username}?start={parts[1]}"
                 else:
                     reload_url = f"https://t.me/{client.username}"
                 keyboard = InlineKeyboardMarkup(
@@ -344,7 +347,7 @@ async def not_joined(client: Client, message: Message):
         try:
             parts = message.text.split(maxsplit=1)
             if len(parts) > 1:
-                retry_url = f"<https://t.me/{client.username}?start={parts>[1]}"
+                retry_url = f"https://t.me/{client.username}?start={parts[1]}"
             else:
                 retry_url = f"https://t.me/{client.username}"
             buttons.append([
