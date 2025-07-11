@@ -6,7 +6,7 @@ from pyrogram import Client
 from pyrogram.enums import ParseMode
 import sys
 import pytz
-from datetime import datetime
+from datetime import datetime, timedelta, time as dt_time
 from config import *
 from database.db_premium import *
 from database.database import *
@@ -19,6 +19,40 @@ logging.getLogger("apscheduler").setLevel(logging.WARNING)
 scheduler = AsyncIOScheduler(timezone="Asia/Kolkata")
 scheduler.add_job(remove_expired_users, "interval", seconds=10)
 
+# NEW: Daily verification reset function
+async def daily_verification_reset():
+    """Reset all user verifications at 5:30 AM IST daily"""
+    try:
+        # Get all users from database
+        all_users = await db.full_userbase()
+        reset_count = 0
+        
+        for user_id in all_users:
+            try:
+                # Reset verification status for each user
+                await db.update_verify_status(user_id, is_verified=False)
+                reset_count += 1
+            except Exception as e:
+                print(f"Error resetting verification for user {user_id}: {e}")
+        
+        print(f"Daily verification reset completed at 5:30 AM IST: {reset_count} users reset")
+        
+        # Optional: Send notification to owner
+        try:
+            bot_instance = Bot()
+            await bot_instance.send_message(
+                OWNER_ID, 
+                f"🔄 Daily Verification Reset Complete\n\n"
+                f"⏰ Time: 5:30 AM IST\n"
+                f"👥 Users Reset: {reset_count}\n"
+                f"📅 Date: {datetime.now().strftime('%Y-%m-%d')}"
+            )
+        except:
+            pass
+            
+    except Exception as e:
+        print(f"Error in daily verification reset: {e}")
+
 # Reset verify count for all users daily at 00:00 IST
 async def daily_reset_task():
     try:
@@ -26,9 +60,9 @@ async def daily_reset_task():
     except Exception:
         pass  
 
+# Add both scheduled jobs
 scheduler.add_job(daily_reset_task, "cron", hour=0, minute=0)
-#scheduler.start()
-
+scheduler.add_job(daily_verification_reset, "cron", hour=5, minute=30)  # NEW: Daily verification reset
 
 name ="""
  BY Yae Miko
@@ -79,9 +113,10 @@ class Bot(Client):
         await app.setup()
         await web.TCPSite(app, "0.0.0.0", PORT).start()
 
-
-        try: await self.send_message(OWNER_ID, text = f"<b>𝙼𝚊𝚜𝚝𝚎𝚛 𝚈𝚘𝚞𝚛 𝙱𝚘𝚝 𝙷𝚊𝚜 𝙱𝚎𝚎𝚗 𝚂𝚝𝚊𝚛𝚝𝚎𝚍!</b>")
-        except: pass
+        try: 
+            await self.send_message(OWNER_ID, text = f"<b>𝙼𝚊𝚜𝚝𝚎𝚛 𝚈𝚘𝚞𝚛 𝙱𝚘𝚝 𝙷𝚊𝚜 𝙱𝚎𝚎𝚗 𝚂𝚝𝚊𝚛𝚝𝚎𝚍!</b>")
+        except: 
+            pass
 
     async def stop(self, *args):
         await super().stop()
