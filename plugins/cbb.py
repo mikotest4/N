@@ -3,10 +3,13 @@ from bot import Bot
 from config import *
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from database.database import *
+from database.db_premium import *
 import requests
 import urllib.parse
 import asyncio
 from pyrogram import filters
+from datetime import datetime, timedelta
+from pytz import timezone
 
 # Dictionary to store payment sessions
 payment_sessions = {}
@@ -56,6 +59,9 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             ),
             reply_markup=InlineKeyboardMarkup([
                 [
+                    InlineKeyboardButton("🧪 Test - 1 ₹ 1 Min", callback_data="plan_test_1")
+                ],
+                [
                     InlineKeyboardButton("7 Days - 50 ₹", callback_data="plan_7_50"),
                     InlineKeyboardButton("1 Month - 130 ₹", callback_data="plan_30_130")
                 ],
@@ -75,19 +81,26 @@ async def cb_handler(client: Bot, query: CallbackQuery):
     elif data.startswith("plan_"):
         # Extract plan details from callback data
         parts = data.split("_")
-        days = parts[1]
-        price = parts[2]
         
-        # Plan name mapping
-        plan_names = {
-            "7": "7 Days",
-            "30": "1 Month", 
-            "90": "3 Months",
-            "180": "6 Months",
-            "365": "1 Year"
-        }
-        
-        plan_name = plan_names.get(days, f"{days} Days")
+        if parts[1] == "test":
+            # Test plan
+            days = "test"
+            price = "1"
+            plan_name = "Test Plan (1 Min)"
+        else:
+            days = parts[1]
+            price = parts[2]
+            
+            # Plan name mapping
+            plan_names = {
+                "7": "7 Days",
+                "30": "1 Month", 
+                "90": "3 Months",
+                "180": "6 Months",
+                "365": "1 Year"
+            }
+            
+            plan_name = plan_names.get(days, f"{days} Days")
         
         # Generate UPI QR Code
         upi_id = "singhzerotwo@fam"
@@ -155,15 +168,17 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         price = parts[2]
         
         # Plan name mapping
-        plan_names = {
-            "7": "7 Days",
-            "30": "1 Month", 
-            "90": "3 Months",
-            "180": "6 Months",
-            "365": "1 Year"
-        }
-        
-        plan_name = plan_names.get(days, f"{days} Days")
+        if days == "test":
+            plan_name = "Test Plan (1 Min)"
+        else:
+            plan_names = {
+                "7": "7 Days",
+                "30": "1 Month", 
+                "90": "3 Months",
+                "180": "6 Months",
+                "365": "1 Year"
+            }
+            plan_name = plan_names.get(days, f"{days} Days")
         
         # Store payment session
         payment_sessions[query.from_user.id] = {
@@ -313,6 +328,43 @@ async def handle_payment_screenshot(client: Bot, message: Message):
         # Regular photo message - ignore or handle as needed
         pass
 
+# Function to add premium user to database
+async def add_premium_user_to_db(user_id, days):
+    try:
+        # Calculate expiration date
+        ist = timezone("Asia/Kolkata")
+        current_time = datetime.now(ist)
+        
+        # Handle test plan (1 minute)
+        if days == "test":
+            expiration_time = current_time + timedelta(minutes=1)
+        else:
+            expiration_time = current_time + timedelta(days=int(days))
+        
+        # Format expiration timestamp
+        expiration_timestamp = expiration_time.isoformat()
+        
+        # Check if user already exists in premium collection
+        existing_user = await collection.find_one({"user_id": user_id})
+        
+        if existing_user:
+            # Update existing user's expiration time
+            await collection.update_one(
+                {"user_id": user_id},
+                {"$set": {"expiration_timestamp": expiration_timestamp}}
+            )
+        else:
+            # Add new premium user
+            await collection.insert_one({
+                "user_id": user_id,
+                "expiration_timestamp": expiration_timestamp
+            })
+        
+        return True
+    except Exception as e:
+        print(f"Error adding premium user to DB: {e}")
+        return False
+
 # Handler for admin approval/rejection
 @Bot.on_callback_query(filters.user(OWNER_ID))
 async def handle_admin_payment_actions(client: Bot, query: CallbackQuery):
@@ -321,30 +373,51 @@ async def handle_admin_payment_actions(client: Bot, query: CallbackQuery):
     if data.startswith("approve_"):
         parts = data.split("_")
         user_id = int(parts[1])
-        days = int(parts[2])
+        days = parts[2]
         
         try:
-            # Add premium to user (you'll need to implement this based on your premium system)
-            # For now, just sending a message
-            await client.send_message(
-                chat_id=user_id,
-                text=(
-                    f"🎉 <b>Payment Approved!</b>\n\n"
-                    f"Your premium membership has been activated.\n"
-                    f"Enjoy your premium features! ✨"
+            # Add premium user to database
+            success = await add_premium_user_to_db(user_id, days)
+            
+            if success:
+                # Calculate expiration date for display
+                ist = timezone("Asia/Kolkata")
+                current_time = datetime.now(ist)
+                
+                if days == "test":
+                    expiration_time = current_time + timedelta(minutes=1)
+                    duration_text = "1 minute"
+                else:
+                    expiration_time = current_time + timedelta(days=int(days))
+                    duration_text = f"{days} days"
+                
+                expiration_str = expiration_time.strftime("%d-%m-%Y %I:%M %p")
+                
+                # Send success message to user
+                await client.send_message(
+                    chat_id=user_id,
+                    text=(
+                        f"🎉 <b>Payment Approved!</b>\n\n"
+                        f"✅ <b>Your premium membership has been activated.</b>\n"
+                        f"⏰ <b>Valid until:</b> {expiration_str} IST\n"
+                        f"⌛ <b>Duration:</b> {duration_text}\n\n"
+                        f"Enjoy your premium features! ✨"
+                    )
                 )
-            )
-            
-            # Update admin message
-            await query.message.edit_caption(
-                caption=query.message.caption + f"\n\n✅ <b>APPROVED</b> by admin",
-                reply_markup=None
-            )
-            
-            await query.answer("Payment approved successfully!", show_alert=True)
+                
+                # Update admin message
+                await query.message.edit_caption(
+                    caption=query.message.caption + f"\n\n✅ <b>APPROVED</b> by admin\n🎯 <b>Premium activated for {duration_text}</b>",
+                    reply_markup=None
+                )
+                
+                await query.answer("Payment approved and premium activated!", show_alert=True)
+            else:
+                await query.answer("Failed to add premium to database!", show_alert=True)
             
         except Exception as e:
             await query.answer("Failed to approve payment!", show_alert=True)
+            print(f"Error in approval: {e}")
     
     elif data.startswith("reject_"):
         parts = data.split("_")
