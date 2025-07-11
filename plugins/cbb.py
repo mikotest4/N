@@ -5,6 +5,11 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, 
 from database.database import *
 import requests
 import urllib.parse
+import asyncio
+from pyrogram import filters
+
+# Dictionary to store payment sessions
+payment_sessions = {}
 
 @Bot.on_callback_query()
 async def cb_handler(client: Bot, query: CallbackQuery):
@@ -111,7 +116,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 ),
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("📞 Contact Admin", url=f"https://t.me/{OWNER_TAG.replace('@', '')}")
+                        InlineKeyboardButton("💰 I Have Paid", callback_data=f"paid_{days}_{price}")
                     ],
                     [
                         InlineKeyboardButton("🔙 Back to Plans", callback_data="premium"),
@@ -134,7 +139,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 ),
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("📞 Contact Admin", url=f"https://t.me/{OWNER_TAG.replace('@', '')}")
+                        InlineKeyboardButton("💰 I Have Paid", callback_data=f"paid_{days}_{price}")
                     ],
                     [
                         InlineKeyboardButton("🔙 Back to Plans", callback_data="premium"),
@@ -142,6 +147,42 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     ]
                 ])
             )
+
+    elif data.startswith("paid_"):
+        # Extract plan details
+        parts = data.split("_")
+        days = parts[1]
+        price = parts[2]
+        
+        # Plan name mapping
+        plan_names = {
+            "7": "7 Days",
+            "30": "1 Month", 
+            "90": "3 Months",
+            "180": "6 Months",
+            "365": "1 Year"
+        }
+        
+        plan_name = plan_names.get(days, f"{days} Days")
+        
+        # Store payment session
+        payment_sessions[query.from_user.id] = {
+            "days": days,
+            "price": price,
+            "plan_name": plan_name
+        }
+        
+        await query.message.edit_text(
+            text=(
+                f"📸 <b>Please send your payment screenshot now.</b>\n\n"
+                f"⏰ <b>You have 5 minutes to send the screenshot.</b>"
+            ),
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("❌ Cancel", callback_data="premium")
+                ]
+            ])
+        )
 
     elif data == "close":
         await query.message.delete()
@@ -214,3 +255,118 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             reply_markup=InlineKeyboardMarkup(buttons),
             disable_web_page_preview=True
         )
+
+# Handler for payment screenshots
+@Bot.on_message(filters.photo & filters.private)
+async def handle_payment_screenshot(client: Bot, message: Message):
+    user_id = message.from_user.id
+    
+    # Check if user has an active payment session
+    if user_id in payment_sessions:
+        session = payment_sessions[user_id]
+        
+        # Get user details
+        username = f"@{message.from_user.username}" if message.from_user.username else "No Username"
+        user_id_mono = f"<code>{user_id}</code>"
+        plan_info = f"{session['plan_name']} - {session['price']} ₹"
+        
+        # Send confirmation to user
+        await message.reply_text(
+            text=(
+                f"✅ <b>Payment screenshot received!</b>\n\n"
+                f"Your payment is being verified by admin.\n"
+                f"You will get premium access once verified.\n\n"
+                f"Thank you for your purchase! 🎉"
+            )
+        )
+        
+        # Forward screenshot to owner with payment info
+        try:
+            await client.send_photo(
+                chat_id=OWNER_ID,
+                photo=message.photo.file_id,
+                caption=(
+                    f"💰 <b>Payment Information</b>\n\n"
+                    f"👤 <b>Username:</b> {username}\n"
+                    f"🆔 <b>User ID:</b> {user_id_mono}\n"
+                    f"💳 <b>Payment Selected:</b> {plan_info}\n"
+                ),
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("✅ Approve", callback_data=f"approve_{user_id}_{session['days']}"),
+                        InlineKeyboardButton("❌ Reject", callback_data=f"reject_{user_id}")
+                    ]
+                ])
+            )
+        except Exception as e:
+            await message.reply_text(
+                text=(
+                    f"⚠️ <b>Error sending to admin!</b>\n\n"
+                    f"Please contact admin manually: {OWNER_TAG}"
+                )
+            )
+        
+        # Remove session after processing
+        del payment_sessions[user_id]
+    
+    else:
+        # Regular photo message - ignore or handle as needed
+        pass
+
+# Handler for admin approval/rejection
+@Bot.on_callback_query(filters.user(OWNER_ID))
+async def handle_admin_payment_actions(client: Bot, query: CallbackQuery):
+    data = query.data
+    
+    if data.startswith("approve_"):
+        parts = data.split("_")
+        user_id = int(parts[1])
+        days = int(parts[2])
+        
+        try:
+            # Add premium to user (you'll need to implement this based on your premium system)
+            # For now, just sending a message
+            await client.send_message(
+                chat_id=user_id,
+                text=(
+                    f"🎉 <b>Payment Approved!</b>\n\n"
+                    f"Your premium membership has been activated.\n"
+                    f"Enjoy your premium features! ✨"
+                )
+            )
+            
+            # Update admin message
+            await query.message.edit_caption(
+                caption=query.message.caption + f"\n\n✅ <b>APPROVED</b> by admin",
+                reply_markup=None
+            )
+            
+            await query.answer("Payment approved successfully!", show_alert=True)
+            
+        except Exception as e:
+            await query.answer("Failed to approve payment!", show_alert=True)
+    
+    elif data.startswith("reject_"):
+        parts = data.split("_")
+        user_id = int(parts[1])
+        
+        try:
+            await client.send_message(
+                chat_id=user_id,
+                text=(
+                    f"❌ <b>Payment Rejected!</b>\n\n"
+                    f"Your payment screenshot was not verified.\n"
+                    f"Please contact admin: {OWNER_TAG}"
+                )
+            )
+            
+            # Update admin message
+            await query.message.edit_caption(
+                caption=query.message.caption + f"\n\n❌ <b>REJECTED</b> by admin",
+                reply_markup=None
+            )
+            
+            await query.answer("Payment rejected!", show_alert=True)
+            
+        except Exception as e:
+            await query.answer("Failed to reject payment!", show_alert=True)
