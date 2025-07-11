@@ -227,85 +227,14 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             ])
         )
 
-    # Admin approval/rejection handlers
-    elif data.startswith("approve_"):
-        # Check if user is owner
-        if query.from_user.id != OWNER_ID:
-            await query.answer("❌ Only owner can approve payments!", show_alert=True)
-            return
-            
-        parts = data.split("_")
-        user_id = int(parts[1])
-        days = parts[2]
-        
-        try:
-            # Add premium user to database using db_premium function
-            success, expiration_time = await add_premium_user_to_db(user_id, days)
-            
-            if success:
-                # Calculate duration text
-                if days == "test":
-                    duration_text = "1 minute"
-                else:
-                    duration_text = f"{days} days"
-                
-                expiration_str = expiration_time.strftime("%d-%m-%Y %I:%M %p")
-                
-                # Send success message to user
-                await client.send_message(
-                    chat_id=user_id,
-                    text=(
-                        f"🎉 <b>Payment Approved!</b>\n\n"
-                        f"✅ <b>Your premium membership has been activated.</b>\n"
-                        f"⏰ <b>Valid until:</b> {expiration_str} IST\n"
-                        f"⌛ <b>Duration:</b> {duration_text}\n\n"
-                        f"Enjoy your premium features! ✨"
-                    )
-                )
-                
-                # Update admin message
-                await query.message.edit_caption(
-                    caption=query.message.caption + f"\n\n✅ <b>APPROVED</b> by admin\n🎯 <b>Premium activated for {duration_text}</b>",
-                    reply_markup=None
-                )
-                
-                await query.answer("✅ Payment approved and premium activated successfully!", show_alert=True)
-            else:
-                await query.answer("❌ Failed to add premium to database!", show_alert=True)
-            
-        except Exception as e:
-            await query.answer("❌ Error approving payment!", show_alert=True)
-            print(f"Error in approval: {e}")
+    # --- REMOVE/COMMENT OUT ADMIN APPROVE/REJECT HANDLERS ---
+    # elif data.startswith("approve_"):
+    #     # Approval handler removed
+    #     pass
 
-    elif data.startswith("reject_"):
-        # Check if user is owner
-        if query.from_user.id != OWNER_ID:
-            await query.answer("❌ Only owner can reject payments!", show_alert=True)
-            return
-            
-        parts = data.split("_")
-        user_id = int(parts[1])
-        
-        try:
-            await client.send_message(
-                chat_id=user_id,
-                text=(
-                    f"❌ <b>Payment Rejected!</b>\n\n"
-                    f"Your payment screenshot was not verified.\n"
-                    f"Please contact admin: {OWNER_TAG}"
-                )
-            )
-            
-            # Update admin message
-            await query.message.edit_caption(
-                caption=query.message.caption + f"\n\n❌ <b>REJECTED</b> by admin",
-                reply_markup=None
-            )
-            
-            await query.answer("❌ Payment rejected successfully!", show_alert=True)
-            
-        except Exception as e:
-            await query.answer("❌ Error rejecting payment!", show_alert=True)
+    # elif data.startswith("reject_"):
+    #     # Rejection handler removed
+    #     pass
 
     elif data == "close":
         await query.message.delete()
@@ -403,7 +332,7 @@ async def handle_payment_screenshot(client: Bot, message: Message):
             )
         )
         
-        # Forward screenshot to owner with payment info
+        # Forward screenshot to owner with payment info (NO APPROVE/REJECT BUTTONS)
         try:
             await client.send_photo(
                 chat_id=OWNER_ID,
@@ -413,13 +342,8 @@ async def handle_payment_screenshot(client: Bot, message: Message):
                     f"👤 <b>Username:</b> {username}\n"
                     f"🆔 <b>User ID:</b> {user_id_mono}\n"
                     f"💳 <b>Payment Selected:</b> {plan_info}\n"
-                ),
-                reply_markup=InlineKeyboardMarkup([
-                    [
-                        InlineKeyboardButton("✅ Approve", callback_data=f"approve_{user_id}_{session['days']}"),
-                        InlineKeyboardButton("❌ Reject", callback_data=f"reject_{user_id}")
-                    ]
-                ])
+                )
+                # No reply_markup here!
             )
         except Exception as e:
             await message.reply_text(
