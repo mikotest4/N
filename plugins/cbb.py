@@ -3,6 +3,8 @@ from bot import Bot
 from config import *
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from database.database import *
+import requests
+import urllib.parse
 
 @Bot.on_callback_query()
 async def cb_handler(client: Bot, query: CallbackQuery):
@@ -82,29 +84,64 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         
         plan_name = plan_names.get(days, f"{days} Days")
         
-        await query.message.edit_text(
-            text=(
-                f"💎 **{plan_name} Premium Plan**\n\n"
-                f"💰 **Price:** {price} ₹\n"
-                f"⏰ **Duration:** {plan_name}\n\n"
-                f"📱 **Payment Instructions:**\n"
-                f"1️⃣ Pay {price} ₹ to the UPI ID below\n"
-                f"2️⃣ Take a screenshot of payment\n"
-                f"3️⃣ Send screenshot to admin\n\n"
-                f"💳 **UPI ID:** `{UPI_ID}`\n\n"
-                f"👤 **Contact Admin:** {OWNER_TAG}\n\n"
-                f"⚠️ **Note:** Send payment screenshot to admin for instant activation!"
-            ),
-            reply_markup=InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("📞 Contact Admin", url=f"https://t.me/{OWNER_TAG.replace('@', '')}")
-                ],
-                [
-                    InlineKeyboardButton("🔙 Back to Plans", callback_data="premium"),
-                    InlineKeyboardButton("🏠 Home", callback_data="start")
-                ]
-            ])
-        )
+        # Generate UPI QR Code
+        upi_id = "singhzerotwo@fam"
+        amount = price
+        note = f"{plan_name} Premium Plan"
+        
+        # Create UPI payment URL
+        upi_url = f"upi://pay?pa={upi_id}&pn={urllib.parse.quote(note)}&am={amount}&cu=INR"
+        
+        # Generate QR Code using API
+        qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={urllib.parse.quote(upi_url)}"
+        
+        try:
+            await query.message.delete()
+            await client.send_photo(
+                chat_id=query.message.chat.id,
+                photo=qr_api_url,
+                caption=(
+                    f"💎 <b>{plan_name} Premium Plan</b>\n\n"
+                    f"💰 <b>Price:</b> {price} ₹\n"
+                    f"⏰ <b>Duration:</b> {plan_name}\n\n"
+                    f"📱 <b>Payment Instructions:</b>\n"
+                    f"1️⃣ <b>Pay {price} ₹ to the UPI ID below</b>\n"
+                    f"2️⃣ <b>Take a screenshot of payment</b>\n"
+                    f"3️⃣ <b>Send screenshot to admin</b>"
+                ),
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("📞 Contact Admin", url=f"https://t.me/{OWNER_TAG.replace('@', '')}")
+                    ],
+                    [
+                        InlineKeyboardButton("🔙 Back to Plans", callback_data="premium"),
+                        InlineKeyboardButton("🏠 Home", callback_data="start")
+                    ]
+                ])
+            )
+        except Exception as e:
+            # Fallback if QR generation fails
+            await query.message.edit_text(
+                text=(
+                    f"💎 <b>{plan_name} Premium Plan</b>\n\n"
+                    f"💰 <b>Price:</b> {price} ₹\n"
+                    f"⏰ <b>Duration:</b> {plan_name}\n\n"
+                    f"📱 <b>Payment Instructions:</b>\n"
+                    f"1️⃣ <b>Pay {price} ₹ to UPI ID: singhzerotwo@fam</b>\n"
+                    f"2️⃣ <b>Take a screenshot of payment</b>\n"
+                    f"3️⃣ <b>Send screenshot to admin</b>\n\n"
+                    f"⚠️ <b>QR Code generation failed. Please pay manually.</b>"
+                ),
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("📞 Contact Admin", url=f"https://t.me/{OWNER_TAG.replace('@', '')}")
+                    ],
+                    [
+                        InlineKeyboardButton("🔙 Back to Plans", callback_data="premium"),
+                        InlineKeyboardButton("🏠 Home", callback_data="start")
+                    ]
+                ])
+            )
 
     elif data == "close":
         await query.message.delete()
