@@ -1,311 +1,297 @@
-import motor.motor_asyncio
-from config import DB_URI, DB_NAME
-from pytz import timezone
+import motor.asyncio
+from config import DATABASE_URL, DATABASE_NAME
 from datetime import datetime, timedelta
-import logging
+from pytz import timezone
 
-# Create an async client with Motor
-dbclient = motor.motor_asyncio.AsyncIOMotorClient(DB_URI)
-database = dbclient[DB_NAME]
-collection = database['premium-users']
+# MongoDB connection
+client = motor.asyncio.AsyncIOMotorClient(DATABASE_URL)
+db = client[DATABASE_NAME]
+collection = db["premium_users"]
 
-# Configure logging for premium operations
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Check if the user is a premium user
-async def is_premium_user(user_id):
-    user = await collection.find_one({"user_id": user_id})  # Async query
-    return user is not None
-
-# Remove premium user
-async def remove_premium(user_id):
-    result = await collection.delete_one({"user_id": user_id})  # Async removal
-    if result.deleted_count > 0:
-        logger.info(f"Premium removed for user: {user_id}")
-    return result.deleted_count > 0
-
-# Enhanced remove expired users with better logging
-async def remove_expired_users():
-    """Enhanced function to remove expired users with detailed logging"""
-    try:
-        ist = timezone("Asia/Kolkata")
-        current_time = datetime.now(ist)
-        removed_count = 0
-
-        # Find all premium users
-        async for user in collection.find({}):
-            user_id = user.get("user_id")
-            expiration = user.get("expiration_timestamp")
-            
-            if not expiration or not user_id:
-                # Remove invalid entries
-                await collection.delete_one({"user_id": user_id})
-                logger.warning(f"Removed invalid premium entry for user: {user_id}")
-                removed_count += 1
-                continue
-
-            try:
-                expiration_time = datetime.fromisoformat(expiration).astimezone(ist)
-                if expiration_time <= current_time:
-                    # Remove expired user
-                    await collection.delete_one({"user_id": user_id})
-                    logger.info(f"Auto-removed expired premium user: {user_id} (expired: {expiration_time.strftime('%Y-%m-%d %H:%M:%S')})")
-                    removed_count += 1
-            except Exception as e:
-                logger.error(f"Error processing user {user_id}: {e}")
-                # Remove problematic entries
-                await collection.delete_one({"user_id": user_id})
-                removed_count += 1
-
-        if removed_count > 0:
-            logger.info(f"Premium cleanup completed: {removed_count} expired users removed")
-        
-        return removed_count
-    except Exception as e:
-        logger.error(f"Error in remove_expired_users: {e}")
-        return 0
-
-# Startup cleanup function
-async def startup_premium_cleanup():
-    """Clean expired premium users on bot startup"""
-    try:
-        logger.info("Starting premium cleanup on bot startup...")
-        removed_count = await remove_expired_users()
-        logger.info(f"Startup cleanup completed: {removed_count} expired users removed")
-        return removed_count
-    except Exception as e:
-        logger.error(f"Error in startup cleanup: {e}")
-        return 0
-
-# Get users expiring in next 24 hours (for notifications)
-async def get_users_expiring_in_24h():
-    """Get list of users whose premium expires in next 24 hours"""
-    try:
-        ist = timezone("Asia/Kolkata")
-        current_time = datetime.now(ist)
-        tomorrow = current_time + timedelta(days=1)
-        
-        expiring_users = []
-        async for user in collection.find({}):
-            user_id = user.get("user_id")
-            expiration = user.get("expiration_timestamp")
-            
-            if expiration and user_id:
-                try:
-                    expiration_time = datetime.fromisoformat(expiration).astimezone(ist)
-                    if current_time < expiration_time <= tomorrow:
-                        expiring_users.append({
-                            'user_id': user_id,
-                            'expires_at': expiration_time
-                        })
-                except Exception as e:
-                    logger.error(f"Error processing expiring user {user_id}: {e}")
-        
-        return expiring_users
-    except Exception as e:
-        logger.error(f"Error getting expiring users: {e}")
-        return []
-
-# List active premium users with enhanced info
-async def list_premium_users():
-    """List active premium users with detailed information"""
-    try:
-        # Define IST timezone
-        ist = timezone("Asia/Kolkata")
-        current_time = datetime.now(ist)
-        
-        # Fetch all premium users from the collection
-        premium_users = collection.find({})
-        premium_user_list = []
-        expired_found = 0
-
-        async for user in premium_users:
-            user_id = user["user_id"]
-            expiration_timestamp = user["expiration_timestamp"]
-
-            try:
-                # Convert expiration timestamp to a timezone-aware datetime object in IST
-                expiration_time = datetime.fromisoformat(expiration_timestamp).astimezone(ist)
-
-                # Calculate the remaining time (make sure both are timezone-aware)
-                remaining_time = expiration_time - current_time
-
-                if remaining_time.total_seconds() > 0:  # Only active users
-                    # Calculate days, hours, minutes, and seconds left
-                    days, hours, minutes, seconds = (
-                        remaining_time.days,
-                        remaining_time.seconds // 3600,
-                        (remaining_time.seconds // 60) % 60,
-                        remaining_time.seconds % 60,
-                    )
-
-                    # Format the expiration time in IST and remaining time
-                    expiry_info = f"{days}d {hours}h {minutes}m {seconds}s left"
-
-                    # Format the expiration time for clarity
-                    formatted_expiry_time = expiration_time.strftime('%Y-%m-%d %H:%M:%S %p IST')
-
-                    # Add user info to the list with both remaining and expiration times
-                    premium_user_list.append(f"UserID: {user_id} - Expiry: {expiry_info} (Expires at {formatted_expiry_time})")
-                else:
-                    expired_found += 1
-            except Exception as e:
-                logger.error(f"Error processing user {user_id} in list: {e}")
-                expired_found += 1
-
-        if expired_found > 0:
-            logger.info(f"Found {expired_found} expired users during listing (will be cleaned up automatically)")
-
-        return premium_user_list
-    except Exception as e:
-        logger.error(f"Error listing premium users: {e}")
-        return []
-
-# Add premium user with enhanced logging
-async def add_premium(user_id, time_value, time_unit):
+# Function to add premium user to database
+async def add_premium_user_to_db(user_id, days):
     """
-    Add a premium user for a specific duration with enhanced logging.
-    
+    Add premium user to database with expiration date
     Args:
-        user_id (int): The ID of the user to add premium access for.
-        time_value (int): The numeric value of the duration.
-        time_unit (str): Time unit - 's'=seconds, 'm'=minutes, 'h'=hours, 'd'=days, 'y'=years.
+        user_id: Telegram user ID
+        days: Number of days for premium (or 'test' for 1 minute)
+    Returns:
+        Tuple: (success: bool, expiration_time: datetime)
     """
     try:
-        # Normalize unit to lowercase
-        time_unit = time_unit.lower()
-
-        # Get IST timezone
+        # Calculate expiration date
         ist = timezone("Asia/Kolkata")
-
-        # Calculate expiration time
-        now = datetime.now(ist)
-        if time_unit == 's':
-            expiration_time = now + timedelta(seconds=time_value)
-        elif time_unit == 'm':
-            expiration_time = now + timedelta(minutes=time_value)
-        elif time_unit == 'h':
-            expiration_time = now + timedelta(hours=time_value)
-        elif time_unit == 'd':
-            expiration_time = now + timedelta(days=time_value)
-        elif time_unit == 'y':
-            expiration_time = now + timedelta(days=365 * time_value)
-        else:
-            raise ValueError("Invalid time unit. Use 's', 'm', 'h', 'd', or 'y'.")
-
-        # Prepare premium data
-        premium_data = {
-            "user_id": user_id,
-            "expiration_timestamp": expiration_time.isoformat(),
-        }
-
-        # Update database
-        result = await collection.update_one(
-            {"user_id": user_id},
-            {"$set": premium_data},
-            upsert=True
-        )
-
-        # Format and return
-        formatted_expiration = expiration_time.strftime('%Y-%m-%d %H:%M:%S %p IST')
+        current_time = datetime.now(ist)
         
-        if result.upserted_id:
-            logger.info(f"Added new premium user: {user_id} (expires: {formatted_expiration})")
+        # Handle test plan (1 minute)
+        if days == "test":
+            expiration_time = current_time + timedelta(minutes=1)
         else:
-            logger.info(f"Updated premium user: {user_id} (expires: {formatted_expiration})")
+            expiration_time = current_time + timedelta(days=int(days))
         
-        return formatted_expiration
+        # Format expiration timestamp
+        expiration_timestamp = expiration_time.isoformat()
+        
+        # Check if user already exists in premium collection
+        existing_user = await collection.find_one({"user_id": user_id})
+        
+        if existing_user:
+            # Update existing user's expiration time
+            await collection.update_one(
+                {"user_id": user_id},
+                {"$set": {"expiration_timestamp": expiration_timestamp}}
+            )
+            print(f"Updated premium for user {user_id} until {expiration_time}")
+        else:
+            # Add new premium user
+            await collection.insert_one({
+                "user_id": user_id,
+                "expiration_timestamp": expiration_timestamp
+            })
+            print(f"Added new premium user {user_id} until {expiration_time}")
+        
+        return True, expiration_time
     except Exception as e:
-        logger.error(f"Error adding premium for user {user_id}: {e}")
-        raise
+        print(f"Error adding premium user to DB: {e}")
+        return False, None
 
-# Check if a user has an active premium plan with auto-cleanup
-async def check_user_plan(user_id):
-    """Check user's premium plan with automatic cleanup of expired users"""
+# Function to check if user is premium
+async def is_premium_user(user_id):
+    """
+    Check if user has active premium membership
+    Args:
+        user_id: Telegram user ID
+    Returns:
+        bool: True if user is premium, False otherwise
+    """
     try:
-        user = await collection.find_one({"user_id": user_id})  # Async query for user
+        user = await collection.find_one({"user_id": user_id})
+        if not user:
+            return False
+            
+        # Check if premium has expired
+        ist = timezone("Asia/Kolkata")
+        current_time = datetime.now(ist)
+        expiration_time = datetime.fromisoformat(user["expiration_timestamp"])
+        
+        if current_time > expiration_time:
+            # Remove expired premium user
+            await collection.delete_one({"user_id": user_id})
+            print(f"Removed expired premium user {user_id}")
+            return False
+            
+        return True
+    except Exception as e:
+        print(f"Error checking premium user: {e}")
+        return False
+
+# Function to get premium expiration date
+async def get_premium_expiration(user_id):
+    """
+    Get premium expiration date for user
+    Args:
+        user_id: Telegram user ID
+    Returns:
+        datetime: Expiration date or None if not premium
+    """
+    try:
+        user = await collection.find_one({"user_id": user_id})
         if not user:
             return None
             
-        expiration_timestamp = user["expiration_timestamp"]
-        
-        # Define IST timezone
-        ist = timezone("Asia/Kolkata")
-        
-        # Convert expiration timestamp to a timezone-aware datetime object in IST
-        expiration_time = datetime.fromisoformat(expiration_timestamp).astimezone(ist)
-        
-        # Get current time in IST
-        current_time = datetime.now(ist)
-        
-        # Check if the premium is still active
-        if expiration_time > current_time:
-            # Calculate remaining time
-            remaining_time = expiration_time - current_time
-            
-            # Calculate days, hours, minutes, and seconds left
-            days, hours, minutes, seconds = (
-                remaining_time.days,
-                remaining_time.seconds // 3600,
-                (remaining_time.seconds // 60) % 60,
-                remaining_time.seconds % 60,
-            )
-            
-            # Format the remaining time
-            time_left = f"{days}d {hours}h {minutes}m {seconds}s"
-            
-            # Format the expiration time for clarity
-            formatted_expiry_time = expiration_time.strftime('%Y-%m-%d %H:%M:%S %p IST')
-            
-            return {
-                "active": True,
-                "time_left": time_left,
-                "expires_on": formatted_expiry_time
-            }
-        else:
-            # Premium has expired, remove from database
-            await remove_premium(user_id)
-            logger.info(f"Auto-removed expired premium user during plan check: {user_id}")
-            return {
-                "active": False,
-                "expired": True,
-                "expired_on": expiration_time.strftime('%Y-%m-%d %H:%M:%S %p IST')
-            }
+        return datetime.fromisoformat(user["expiration_timestamp"])
     except Exception as e:
-        logger.error(f"Error checking user plan for {user_id}: {e}")
+        print(f"Error getting premium expiration: {e}")
         return None
 
-# Get premium statistics
+# Function to remove premium user
+async def remove_premium_user(user_id):
+    """
+    Remove premium user from database
+    Args:
+        user_id: Telegram user ID
+    Returns:
+        bool: True if removed successfully, False otherwise
+    """
+    try:
+        result = await collection.delete_one({"user_id": user_id})
+        if result.deleted_count > 0:
+            print(f"Removed premium user {user_id}")
+            return True
+        else:
+            print(f"Premium user {user_id} not found")
+            return False
+    except Exception as e:
+        print(f"Error removing premium user: {e}")
+        return False
+
+# Function to get all premium users
+async def get_all_premium_users():
+    """
+    Get all premium users from database
+    Returns:
+        list: List of premium user documents
+    """
+    try:
+        users = []
+        async for user in collection.find({}):
+            users.append(user)
+        return users
+    except Exception as e:
+        print(f"Error getting all premium users: {e}")
+        return []
+
+# Function to clean expired premium users
+async def clean_expired_premium_users():
+    """
+    Remove all expired premium users from database
+    Returns:
+        int: Number of users removed
+    """
+    try:
+        ist = timezone("Asia/Kolkata")
+        current_time = datetime.now(ist)
+        
+        # Find expired users
+        expired_users = []
+        async for user in collection.find({}):
+            expiration_time = datetime.fromisoformat(user["expiration_timestamp"])
+            if current_time > expiration_time:
+                expired_users.append(user["user_id"])
+        
+        # Remove expired users
+        if expired_users:
+            await collection.delete_many({"user_id": {"$in": expired_users}})
+            print(f"Cleaned {len(expired_users)} expired premium users")
+            
+        return len(expired_users)
+    except Exception as e:
+        print(f"Error cleaning expired premium users: {e}")
+        return 0
+
+# Function to extend premium membership
+async def extend_premium_membership(user_id, additional_days):
+    """
+    Extend existing premium membership
+    Args:
+        user_id: Telegram user ID
+        additional_days: Additional days to add
+    Returns:
+        Tuple: (success: bool, new_expiration_time: datetime)
+    """
+    try:
+        user = await collection.find_one({"user_id": user_id})
+        if not user:
+            return False, None
+            
+        # Get current expiration time
+        current_expiration = datetime.fromisoformat(user["expiration_timestamp"])
+        
+        # Calculate new expiration time
+        ist = timezone("Asia/Kolkata")
+        current_time = datetime.now(ist)
+        
+        # If current premium is still valid, extend from expiration date
+        # If expired, extend from current time
+        if current_expiration > current_time:
+            new_expiration = current_expiration + timedelta(days=additional_days)
+        else:
+            new_expiration = current_time + timedelta(days=additional_days)
+        
+        # Update database
+        await collection.update_one(
+            {"user_id": user_id},
+            {"$set": {"expiration_timestamp": new_expiration.isoformat()}}
+        )
+        
+        print(f"Extended premium for user {user_id} until {new_expiration}")
+        return True, new_expiration
+    except Exception as e:
+        print(f"Error extending premium membership: {e}")
+        return False, None
+
+# Function to get premium stats
 async def get_premium_stats():
-    """Get premium user statistics"""
+    """
+    Get premium membership statistics
+    Returns:
+        dict: Statistics about premium users
+    """
     try:
         total_users = await collection.count_documents({})
+        
+        # Count active vs expired users
+        ist = timezone("Asia/Kolkata")
+        current_time = datetime.now(ist)
+        
         active_users = 0
         expired_users = 0
         
+        async for user in collection.find({}):
+            expiration_time = datetime.fromisoformat(user["expiration_timestamp"])
+            if current_time > expiration_time:
+                expired_users += 1
+            else:
+                active_users += 1
+        
+        return {
+            "total_users": total_users,
+            "active_users": active_users,
+            "expired_users": expired_users
+        }
+    except Exception as e:
+        print(f"Error getting premium stats: {e}")
+        return {
+            "total_users": 0,
+            "active_users": 0,
+            "expired_users": 0
+        }
+
+# Function to get premium user info
+async def get_premium_user_info(user_id):
+    """
+    Get detailed information about a premium user
+    Args:
+        user_id: Telegram user ID
+    Returns:
+        dict: User premium information or None
+    """
+    try:
+        user = await collection.find_one({"user_id": user_id})
+        if not user:
+            return None
+            
+        expiration_time = datetime.fromisoformat(user["expiration_timestamp"])
         ist = timezone("Asia/Kolkata")
         current_time = datetime.now(ist)
         
-        async for user in collection.find({}):
-            expiration = user.get("expiration_timestamp")
-            if expiration:
-                try:
-                    expiration_time = datetime.fromisoformat(expiration).astimezone(ist)
-                    if expiration_time > current_time:
-                        active_users += 1
-                    else:
-                        expired_users += 1
-                except:
-                    expired_users += 1
-            else:
-                expired_users += 1
+        is_active = current_time < expiration_time
+        time_remaining = expiration_time - current_time if is_active else timedelta(0)
         
         return {
-            "total": total_users,
-            "active": active_users,
-            "expired": expired_users
+            "user_id": user_id,
+            "expiration_time": expiration_time,
+            "is_active": is_active,
+            "time_remaining": time_remaining,
+            "days_remaining": time_remaining.days if is_active else 0,
+            "hours_remaining": time_remaining.seconds // 3600 if is_active else 0
         }
     except Exception as e:
-        logger.error(f"Error getting premium stats: {e}")
-        return {"total": 0, "active": 0, "expired": 0}
+        print(f"Error getting premium user info: {e}")
+        return None
+
+# Initialize database indexes for better performance
+async def init_premium_db():
+    """
+    Initialize premium database with proper indexes
+    """
+    try:
+        # Create index on user_id for faster queries
+        await collection.create_index("user_id", unique=True)
+        
+        # Create index on expiration_timestamp for cleanup operations
+        await collection.create_index("expiration_timestamp")
+        
+        print("Premium database initialized successfully")
+    except Exception as e:
+        print(f"Error initializing premium database: {e}")
