@@ -76,13 +76,14 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             ])
         )
 
-    # Premium Message
+    # Premium Message (with image)
     elif data == "premium":
         await query.message.delete()
-        await client.send_message(
+        await client.send_photo(
             chat_id=query.message.chat.id,
-            text=(
-                f"ʜᴇʟʟᴏ {query.from_user.first_name} 👋\n\n"
+            photo="https://telegra.ph/file/a4e279ec76dfb285ef297-0a72f2ad5e693e628f.jpg",
+            caption=(
+                f"ʜᴇʟʟᴏ 『𝚈𝚊𝚎 𝙼𝚒𝚔𝚘』❋𝄗⃝🦋 ⌞𝚆𝚊𝚛𝚕𝚘𝚛𝚍𝚜⌝ ㊋ 👋\n\n"
                 f"ʜᴇʀᴇ ʏᴏᴜ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ ᴍᴇᴍʙᴇʀꜱʜɪᴘ ᴏꜰ ᴛʜɪꜱ ʙᴏᴛ.\n"
                 f"ꜱᴏᴍᴇ ᴘʟᴀɴ ᴀʀᴇ ɢɪᴠᴇɴ ʙᴇʟᴏᴡ ᴄʟɪᴄᴋ ᴏɴ ᴛʜᴇᴍ ᴛᴏ ᴘʀᴏᴄᴇᴇᴅ."
             ),
