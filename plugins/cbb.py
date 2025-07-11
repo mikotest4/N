@@ -40,34 +40,71 @@ async def cb_handler(client: Bot, query: CallbackQuery):
 
     elif data == "premium":
         await query.message.delete()
-        await client.send_photo(
+        await client.send_message(
             chat_id=query.message.chat.id,
-            photo=QR_PIC,
-            caption=(
-                f"👋 {query.from_user.username}\n\n"
-                f"🎖️ Available Plans :\n\n"
-                f"● {PRICE1}  For 0 Days Prime Membership\n\n"
-                f"● {PRICE2}  For 1 Month Prime Membership\n\n"
-                f"● {PRICE3}  For 3 Months Prime Membership\n\n"
-                f"● {PRICE4}  For 6 Months Prime Membership\n\n"
-                f"● {PRICE5}  For 1 Year Prime Membership\n\n\n"
-                f"💵 ASK UPI ID TO ADMIN AND PAY THERE -  <code>{UPI_ID}</code>\n\n\n"
-                f"♻️ After Payment You Will Get Instant Membership \n\n\n"
-                f"‼️ Must Send Screenshot after payment & If anyone want custom time membrship then ask admin"
+            text=(
+                f"Hello {query.from_user.first_name} 👋\n\n"
+                f"Here You Buy Premium Membership Of This Bot.\n"
+                f"Some Plan Are Given Below Click On Them To Proceed."
             ),
-            reply_markup=InlineKeyboardMarkup(
+            reply_markup=InlineKeyboardMarkup([
                 [
-                    [
-                        InlineKeyboardButton(
-                            "ADMIN 24/7", url=(SCREENSHOT_URL)
-                        )
-                    ],
-                    [InlineKeyboardButton("🔒 Close", callback_data="close")],
+                    InlineKeyboardButton("7 Days - 50 ₹", callback_data="plan_7_50"),
+                    InlineKeyboardButton("1 Month - 130 ₹", callback_data="plan_30_130")
+                ],
+                [
+                    InlineKeyboardButton("3 Months - 299 ₹", callback_data="plan_90_299"),
+                    InlineKeyboardButton("6 Months - 599 ₹", callback_data="plan_180_599")
+                ],
+                [
+                    InlineKeyboardButton("1 Year - 999 ₹", callback_data="plan_365_999")
+                ],
+                [
+                    InlineKeyboardButton("🔙 Back", callback_data="start")
                 ]
-            )
+            ])
         )
 
-
+    elif data.startswith("plan_"):
+        # Extract plan details from callback data
+        parts = data.split("_")
+        days = parts[1]
+        price = parts[2]
+        
+        # Plan name mapping
+        plan_names = {
+            "7": "7 Days",
+            "30": "1 Month", 
+            "90": "3 Months",
+            "180": "6 Months",
+            "365": "1 Year"
+        }
+        
+        plan_name = plan_names.get(days, f"{days} Days")
+        
+        await query.message.edit_text(
+            text=(
+                f"💎 **{plan_name} Premium Plan**\n\n"
+                f"💰 **Price:** {price} ₹\n"
+                f"⏰ **Duration:** {plan_name}\n\n"
+                f"📱 **Payment Instructions:**\n"
+                f"1️⃣ Pay {price} ₹ to the UPI ID below\n"
+                f"2️⃣ Take a screenshot of payment\n"
+                f"3️⃣ Send screenshot to admin\n\n"
+                f"💳 **UPI ID:** `{UPI_ID}`\n\n"
+                f"👤 **Contact Admin:** {OWNER_TAG}\n\n"
+                f"⚠️ **Note:** Send payment screenshot to admin for instant activation!"
+            ),
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("📞 Contact Admin", url=f"https://t.me/{OWNER_TAG.replace('@', '')}")
+                ],
+                [
+                    InlineKeyboardButton("🔙 Back to Plans", callback_data="premium"),
+                    InlineKeyboardButton("🏠 Home", callback_data="start")
+                ]
+            ])
+        )
 
     elif data == "close":
         await query.message.delete()
@@ -116,18 +153,27 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         )
 
     elif data == "fsub_back":
+        temp = await query.message.edit_text("<b><i>ᴡᴀɪᴛ ᴀ sᴇᴄ..</i></b>")
         channels = await db.show_channels()
-        buttons = []
-        for cid in channels:
-            try:
-                chat = await client.get_chat(cid)
-                mode = await db.get_channel_mode(cid)
-                status = "🟢" if mode == "on" else "🔴"
-                buttons.append([InlineKeyboardButton(f"{status} {chat.title}", callback_data=f"rfs_ch_{cid}")])
-            except:
-                continue
 
-        await query.message.edit_text(
-            "sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ɪᴛs ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:",
-            reply_markup=InlineKeyboardMarkup(buttons)
+        if not channels:
+            return await temp.edit("<b>❌ No force-sub channels found.</b>")
+
+        buttons = []
+        for ch_id in channels:
+            try:
+                chat = await client.get_chat(ch_id)
+                mode = await db.get_channel_mode(ch_id)
+                status = "🟢" if mode == "on" else "🔴"
+                title = f"{status} {chat.title}"
+                buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
+            except:
+                buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"rfs_ch_{ch_id}")])
+
+        buttons.append([InlineKeyboardButton("Close ✖️", callback_data="close")])
+
+        await temp.edit(
+            "<b>⚡ Select a channel to toggle Force-Sub Mode:</b>",
+            reply_markup=InlineKeyboardMarkup(buttons),
+            disable_web_page_preview=True
         )
