@@ -1,6 +1,3 @@
-#(©)CodeFlix_Bots
-#rohit_1888 on Tg #Dont remove this line
-
 import base64
 import re
 import asyncio
@@ -9,6 +6,7 @@ from datetime import datetime, timedelta, time as dt_time
 from pytz import timezone
 from pyrogram import filters
 from pyrogram.enums import ChatMemberStatus
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import *
 from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant
 from shortzy import Shortzy
@@ -16,18 +14,6 @@ from pyrogram.errors import FloodWait
 from database.database import *
 from database.db_premium import *
 import logging
-
-# Don't Remove Credit @CodeFlix_Bots, @rohit_1888
-# Ask Doubt on telegram @CodeflixSupport
-#
-# Copyright (C) 2025 by Codeflix-Bots@Github, < https://github.com/Codeflix-Bots >.
-#
-# This file is part of < https://github.com/Codeflix-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/Codeflix-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-#
 
 # NEW: Function to check if verification expired due to daily reset
 def check_daily_reset_expired(verified_time):
@@ -105,6 +91,7 @@ async def is_premium_user_enhanced(user_id):
             return False
         
         # Check if premium has expired and auto-remove
+        from database.db_premium import collection
         user_data = await collection.find_one({"user_id": user_id})
         if user_data:
             from datetime import datetime
@@ -124,18 +111,6 @@ async def is_premium_user_enhanced(user_id):
     except Exception as e:
         logging.error(f"Error in enhanced premium check for user {user_id}: {e}")
         return False
-
-# Don't Remove Credit @CodeFlix_Bots, @rohit_1888
-# Ask Doubt on telegram @CodeflixSupport
-#
-# Copyright (C) 2025 by Codeflix-Bots@Github, < https://github.com/Codeflix-Bots >.
-#
-# This file is part of < https://github.com/Codeflix-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/Codeflix-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-#
 
 async def is_subscribed(client, user_id):
     channel_ids = await db.show_channels()
@@ -157,18 +132,6 @@ async def is_subscribed(client, user_id):
             return False
 
     return True
-
-# Don't Remove Credit @CodeFlix_Bots, @rohit_1888
-# Ask Doubt on telegram @CodeflixSupport
-#
-# Copyright (C) 2025 by Codeflix-Bots@Github, < https://github.com/Codeflix-Bots >.
-#
-# This file is part of < https://github.com/Codeflix-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/Codeflix-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-#
 
 async def is_sub(client, user_id, channel_id):
     try:
@@ -192,18 +155,6 @@ async def is_sub(client, user_id, channel_id):
     except Exception as e:
         #print(f"[SUB ERROR] {e}")
         return False
-
-# Don't Remove Credit @CodeFlix_Bots, @rohit_1888
-# Ask Doubt on telegram @CodeflixSupport
-#
-# Copyright (C) 2025 by Codeflix-Bots@Github, < https://github.com/Codeflix-Bots >.
-#
-# This file is part of < https://github.com/Codeflix-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/Codeflix-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-#
 
 async def encode(string):
     string_bytes = string.encode("ascii")
@@ -301,23 +252,12 @@ def humanbytes(size):
         n += 1
     return str(round(size, 2)) + " " + Dic_powerN[n] + 'B'
 
-# Don't Remove Credit @CodeFlix_Bots, @rohit_1888
-# Ask Doubt on telegram @CodeflixSupport
-#
-# Copyright (C) 2025 by Codeflix-Bots@Github, < https://github.com/Codeflix-Bots >.
-#
-# This file is part of < https://github.com/Codeflix-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/Codeflix-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-#
-
-async def get_shortlink(url):
-    if not SHORTLINK_URL:
+# FIXED: Updated get_shortlink function to accept 3 parameters
+async def get_shortlink(shortlink_url, shortlink_api, url):
+    if not shortlink_url:
         return url
     try:
-        shortzy = Shortzy(SHORTLINK_API, SHORTLINK_URL)
+        shortzy = Shortzy(shortlink_api, shortlink_url)
         link = await shortzy.convert(url)
         return link
     except Exception as e:
