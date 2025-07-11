@@ -213,8 +213,8 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         
         await query.message.edit_text(
             text=(
-                f"📸 <b>Please send your payment screenshot now.</b>\n\n"
-                f"⏰ <b>You have 5 minutes to send the screenshot.</b>"
+                f"📸 <b>ᴘʟᴇᴀꜱᴇ ꜱᴇɴᴅ ʏᴏᴜʀ ᴘᴀʏᴍᴇɴᴛ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ ɴᴏᴡ.</b>\n\n"
+                f"⏰ <b>ʏᴏᴜ ʜᴀᴠᴇ 5 ᴍɪɴᴜᴛᴇꜱ ᴛᴏ ꜱᴇɴᴅ ᴛʜᴇ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ.</b>"
             ),
             reply_markup=InlineKeyboardMarkup([
                 [
@@ -312,11 +312,10 @@ async def handle_payment_screenshot(client: Bot, message: Message):
         # Send confirmation to user
         await message.reply_text(
             text=(
-                f"✅ <b>Payment screenshot received!</b>\n\n"
-                f"Your payment is being verified by admin.\n"
-                f"You will get premium access once verified.\n\n"
-                f"Thank you for your purchase! 🎉"
-            )
+                f"✅ <b>ᴘᴀʏᴍᴇɴᴛ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ ʀᴇᴄᴇɪᴠᴇᴅ!</b>\n\n"
+                f"ʏᴏᴜʀ ᴘᴀʏᴍᴇɴᴛ ɪꜱ ʙᴇɪɴɢ ᴠᴇʀɪꜰɪᴇᴅ ʙʏ ᴀᴅᴍɪɴ.\n"
+                f"ʏᴏᴜ ᴡɪʟʟ ɢᴇᴛ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ ᴏɴᴄᴇ ᴠᴇʀɪꜰɪᴇᴅ.\n\n"
+                f"ᴛʜᴀɴᴋ ʏᴏᴜ ꜰᴏʀ ʏᴏᴜʀ ᴘᴜʀᴄʜᴀꜱᴇ! 🎉")
         )
         
         # Forward screenshot to owner with payment info (NO APPROVE/REJECT BUTTONS)
@@ -325,10 +324,10 @@ async def handle_payment_screenshot(client: Bot, message: Message):
                 chat_id=OWNER_ID,
                 photo=message.photo.file_id,
                 caption=(
-                    f"💰 <b>Payment Information</b>\n\n"
-                    f"👤 <b>Username:</b> {username}\n"
-                    f"🆔 <b>User ID:</b> {user_id_mono}\n"
-                    f"💳 <b>Payment Selected:</b> {plan_info}\n"
+                    f"<b>Payment Information</b>\n\n"
+                    f"<b>Username:</b> {username}\n"
+                    f"<b>User ID:</b> {user_id_mono}\n"
+                    f"<b>Payment Selected:</b> {plan_info}\n"
                 )
                 # No reply_markup here!
             )
