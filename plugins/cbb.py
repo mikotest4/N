@@ -75,16 +75,16 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                  InlineKeyboardButton("ᴀʙᴏᴜᴛ", callback_data='about')]
             ])
         )
-#Premium Massage 
+
     elif data == "premium":
         await query.message.delete()
         await client.send_message(
             chat_id=query.message.chat.id,
             text=(
-                  f"ʜᴇʟʟᴏ {query.from_user.first_name} 👋\n\n"
-                  f"ʜᴇʀᴇ ʏᴏᴜ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ ᴍᴇᴍʙᴇʀꜱʜɪᴘ ᴏꜰ ᴛʜɪꜱ ʙᴏᴛ.\n"
-                  f"ꜱᴏᴍᴇ ᴘʟᴀɴ ᴀʀᴇ ɢɪᴠᴇɴ ʙᴇʟᴏᴡ ᴄʟɪᴄᴋ ᴏɴ ᴛʜᴇᴍ ᴛᴏ ᴘʀᴏᴄᴇᴇᴅ."
-                  ),
+                f"Hello {query.from_user.first_name} 👋\n\n"
+                f"Here You Buy Premium Membership Of This Bot.\n"
+                f"Some Plan Are Given Below Click On Them To Proceed."
+            ),
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("🧪 Test - 1 ₹ 1 Min", callback_data="plan_test_1")
@@ -141,19 +141,21 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         # Generate QR Code using API
         qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={urllib.parse.quote(upi_url)}"
         
-         try:
-             await query.message.delete()
-             await client.send_photo(
-             chat_id=query.message.chat.id,
-             photo=qr_api_url,
-             caption=(
-                     f"<b>{plan_name} ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ</b>\n\n"
-                     f"<b>ᴘʀɪᴄᴇ:</b> {price} ₹\n"
-                     f"<b>ᴅᴜʀᴀᴛɪᴏɴ:</b> {plan_name}\n\n"
-                     f"<b>ᴘᴀʏᴍᴇɴᴛ ɪɴꜱᴛʀᴜᴄᴛɪᴏɴꜱ:</b>\n"
-                     f"<b>ᴘᴀʏ {price} ₹ ᴛᴏ ᴛʜᴇ ɢɪᴠᴇɴ Qʀ ᴄᴏᴅᴇ ᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ <u>I ʜᴀᴠᴇ ᴘᴀɪᴅ</u>.</b>\n")
-                 ),
-                   reply_markup=InlineKeyboardMarkup([
+        try:
+            await query.message.delete()
+            await client.send_photo(
+                chat_id=query.message.chat.id,
+                photo=qr_api_url,
+                caption=(
+                    f"💎 <b>{plan_name} Premium Plan</b>\n\n"
+                    f"💰 <b>Price:</b> {price} ₹\n"
+                    f"⏰ <b>Duration:</b> {plan_name}\n\n"
+                    f"📱 <b>Payment Instructions:</b>\n"
+                    f"1️⃣ <b>Pay {price} ₹ to the UPI ID below</b>\n"
+                    f"2️⃣ <b>Take a screenshot of payment</b>\n"
+                    f"3️⃣ <b>Send screenshot to admin</b>"
+                ),
+                reply_markup=InlineKeyboardMarkup([
                     [
                         InlineKeyboardButton("💰 I Have Paid", callback_data=f"paid_{days}_{price}")
                     ],
@@ -166,21 +168,23 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         except Exception as e:
             # Fallback if QR generation fails
             await query.message.edit_text(
-    text=(
-        f"<b>{plan_name} ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ</b>\n\n"
-        f"<b>ᴘʀɪᴄᴇ:</b> {price} ₹\n"
-        f"<b>ᴅᴜʀᴀᴛɪᴏɴ:</b> {plan_name}\n\n"
-        f"<b>ᴘᴀʏᴍᴇɴᴛ ɪɴꜱᴛʀᴜᴄᴛɪᴏɴꜱ:</b>\n"
-        f"<b>ᴘᴀʏ {price} ₹ ᴛᴏ ᴜᴘɪ ɪᴅ:</b> singhzerotwo@fam\n\n"
-        f"<b>Qʀ ᴄᴏᴅᴇ ɢᴇɴᴇʀᴀᴛɪᴏɴ ꜰᴀɪʟᴇᴅ. ᴘʟᴇᴀꜱᴇ ᴘᴀʏ ᴍᴀɴᴜᴀʟʟʏ.</b>")
-),
+                text=(
+                    f"💎 <b>{plan_name} Premium Plan</b>\n\n"
+                    f"💰 <b>Price:</b> {price} ₹\n"
+                    f"⏰ <b>Duration:</b> {plan_name}\n\n"
+                    f"📱 <b>Payment Instructions:</b>\n"
+                    f"1️⃣ <b>Pay {price} ₹ to UPI ID: singhzerotwo@fam</b>\n"
+                    f"2️⃣ <b>Take a screenshot of payment</b>\n"
+                    f"3️⃣ <b>Send screenshot to admin</b>\n\n"
+                    f"⚠️ <b>QR Code generation failed. Please pay manually.</b>"
+                ),
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("I Have Paid", callback_data=f"paid_{days}_{price}")
+                        InlineKeyboardButton("💰 I Have Paid", callback_data=f"paid_{days}_{price}")
                     ],
                     [
-                        InlineKeyboardButton("Back to Plans", callback_data="premium"),
-                        InlineKeyboardButton("Home", callback_data="start")
+                        InlineKeyboardButton("🔙 Back to Plans", callback_data="premium"),
+                        InlineKeyboardButton("🏠 Home", callback_data="start")
                     ]
                 ])
             )
@@ -213,8 +217,8 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         
         await query.message.edit_text(
             text=(
-                f"📸 <b>ᴘʟᴇᴀꜱᴇ ꜱᴇɴᴅ ʏᴏᴜʀ ᴘᴀʏᴍᴇɴᴛ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ ɴᴏᴡ.</b>\n\n"
-                f"⏰ <b>ʏᴏᴜ ʜᴀᴠᴇ 5 ᴍɪɴᴜᴛᴇꜱ ᴛᴏ ꜱᴇɴᴅ ᴛʜᴇ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ.</b>"
+                f"📸 <b>Please send your payment screenshot now.</b>\n\n"
+                f"⏰ <b>You have 5 minutes to send the screenshot.</b>"
             ),
             reply_markup=InlineKeyboardMarkup([
                 [
@@ -222,6 +226,15 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 ]
             ])
         )
+
+    # --- REMOVE/COMMENT OUT ADMIN APPROVE/REJECT HANDLERS ---
+    # elif data.startswith("approve_"):
+    #     # Approval handler removed
+    #     pass
+
+    # elif data.startswith("reject_"):
+    #     # Rejection handler removed
+    #     pass
 
     elif data == "close":
         await query.message.delete()
@@ -312,10 +325,11 @@ async def handle_payment_screenshot(client: Bot, message: Message):
         # Send confirmation to user
         await message.reply_text(
             text=(
-                f"✅ <b>ᴘᴀʏᴍᴇɴᴛ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ ʀᴇᴄᴇɪᴠᴇᴅ!</b>\n\n"
-                f"ʏᴏᴜʀ ᴘᴀʏᴍᴇɴᴛ ɪꜱ ʙᴇɪɴɢ ᴠᴇʀɪꜰɪᴇᴅ ʙʏ ᴀᴅᴍɪɴ.\n"
-                f"ʏᴏᴜ ᴡɪʟʟ ɢᴇᴛ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ ᴏɴᴄᴇ ᴠᴇʀɪꜰɪᴇᴅ.\n\n"
-                f"ᴛʜᴀɴᴋ ʏᴏᴜ ꜰᴏʀ ʏᴏᴜʀ ᴘᴜʀᴄʜᴀꜱᴇ! 🎉")
+                f"✅ <b>Payment screenshot received!</b>\n\n"
+                f"Your payment is being verified by admin.\n"
+                f"You will get premium access once verified.\n\n"
+                f"Thank you for your purchase! 🎉"
+            )
         )
         
         # Forward screenshot to owner with payment info (NO APPROVE/REJECT BUTTONS)
@@ -324,10 +338,10 @@ async def handle_payment_screenshot(client: Bot, message: Message):
                 chat_id=OWNER_ID,
                 photo=message.photo.file_id,
                 caption=(
-                    f"<b>Payment Information</b>\n\n"
-                    f"<b>Username:</b> {username}\n"
-                    f"<b>User ID:</b> {user_id_mono}\n"
-                    f"<b>Payment Selected:</b> {plan_info}\n"
+                    f"💰 <b>Payment Information</b>\n\n"
+                    f"👤 <b>Username:</b> {username}\n"
+                    f"🆔 <b>User ID:</b> {user_id_mono}\n"
+                    f"💳 <b>Payment Selected:</b> {plan_info}\n"
                 )
                 # No reply_markup here!
             )
