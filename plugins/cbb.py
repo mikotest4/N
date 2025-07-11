@@ -14,6 +14,34 @@ from pytz import timezone
 # Dictionary to store payment sessions
 payment_sessions = {}
 
+async def add_premium_user_to_db(user_id: int, days: str):
+    """
+    Add premium user to database and return success status and expiration time
+    """
+    try:
+        # Convert days to appropriate time value and unit
+        if days == "test":
+            # Test plan - 1 minute
+            time_value = 1
+            time_unit = "m"
+        else:
+            time_value = int(days)
+            time_unit = "d"
+        
+        # Add premium using db_premium function
+        expiration_time = await add_premium(user_id, time_value, time_unit)
+        
+        if expiration_time:
+            # Parse the expiration time string to datetime object
+            ist = timezone("Asia/Kolkata")
+            expiration_datetime = datetime.fromisoformat(expiration_time).astimezone(ist)
+            return True, expiration_datetime
+        return False, None
+        
+    except Exception as e:
+        print(f"Error in add_premium_user_to_db: {e}")
+        return False, None
+
 @Bot.on_callback_query()
 async def cb_handler(client: Bot, query: CallbackQuery):
     data = query.data
