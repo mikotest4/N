@@ -88,9 +88,6 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             ),
             reply_markup=InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("🧪 Test - 1 ₹ 1 Min", callback_data="plan_test_1")
-                ],
-                [
                     InlineKeyboardButton("7 Days - 50 ₹", callback_data="plan_7_50"),
                     InlineKeyboardButton("1 Month - 130 ₹", callback_data="plan_30_130")
                 ],
@@ -102,7 +99,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     InlineKeyboardButton("1 Year - 999 ₹", callback_data="plan_365_999")
                 ],
                 [
-                    InlineKeyboardButton("🔙 Back", callback_data="start")
+                    InlineKeyboardButton("Back", callback_data="start")
                 ]
             ])
         )
@@ -156,11 +153,11 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 ),
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("💰 I Have Paid", callback_data=f"paid_{days}_{price}")
+                        InlineKeyboardButton("I Have Paid", callback_data=f"paid_{days}_{price}")
                     ],
                     [
-                        InlineKeyboardButton("🔙 Back to Plans", callback_data="premium"),
-                        InlineKeyboardButton("🏠 Home", callback_data="start")
+                        InlineKeyboardButton("Back to Plans", callback_data="premium"),
+                        InlineKeyboardButton("Home", callback_data="start")
                     ]
                 ])
             )
@@ -214,8 +211,8 @@ async def cb_handler(client: Bot, query: CallbackQuery):
 
         await query.message.edit_text(
             text=(
-                f"📸 <b>ᴘʟᴇᴀꜱᴇ ꜱᴇɴᴅ ʏᴏᴜʀ ᴘᴀʏᴍᴇɴᴛ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ ɴᴏᴡ.</b>\n\n"
-                f"⏰ <b>ʏᴏᴜ ʜᴀᴠᴇ 5 ᴍɪɴᴜᴛᴇꜱ ᴛᴏ ꜱᴇɴᴅ ᴛʜᴇ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ.</b>"
+                f"<b>ᴘʟᴇᴀꜱᴇ ꜱᴇɴᴅ ʏᴏᴜʀ ᴘᴀʏᴍᴇɴᴛ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ ɴᴏᴡ.</b>\n\n"
+                f"<b>ʏᴏᴜ ʜᴀᴠᴇ 5 ᴍɪɴᴜᴛᴇꜱ ᴛᴏ ꜱᴇɴᴅ ᴛʜᴇ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ.</b>"
             ),
             reply_markup=InlineKeyboardMarkup([
                 [
