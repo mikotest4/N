@@ -141,17 +141,17 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         # Generate QR Code using API
         qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={urllib.parse.quote(upi_url)}"
         
-     try:
-    await query.message.delete()
-    await client.send_photo(
-        chat_id=query.message.chat.id,
-        photo=qr_api_url,
-        caption=(
-            f"<b>{plan_name} ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ</b>\n\n"
-            f"<b>ᴘʀɪᴄᴇ:</b> {price} ₹\n"
-            f"<b>ᴅᴜʀᴀᴛɪᴏɴ:</b> {plan_name}\n\n"
-            f"<b>ᴘᴀʏᴍᴇɴᴛ ɪɴꜱᴛʀᴜᴄᴛɪᴏɴꜱ:</b>\n"
-            f"<b>ᴘᴀʏ {price} ₹ ᴛᴏ ᴛʜᴇ ɢɪᴠᴇɴ Qʀ ᴄᴏᴅᴇ ᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ <u>I ʜᴀᴠᴇ ᴘᴀɪᴅ</u>.</b>\n")
+         try:
+             await query.message.delete()
+             await client.send_photo(
+             chat_id=query.message.chat.id,
+             photo=qr_api_url,
+             caption=(
+                     f"<b>{plan_name} ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ</b>\n\n"
+                     f"<b>ᴘʀɪᴄᴇ:</b> {price} ₹\n"
+                     f"<b>ᴅᴜʀᴀᴛɪᴏɴ:</b> {plan_name}\n\n"
+                     f"<b>ᴘᴀʏᴍᴇɴᴛ ɪɴꜱᴛʀᴜᴄᴛɪᴏɴꜱ:</b>\n"
+                     f"<b>ᴘᴀʏ {price} ₹ ᴛᴏ ᴛʜᴇ ɢɪᴠᴇɴ Qʀ ᴄᴏᴅᴇ ᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ <u>I ʜᴀᴠᴇ ᴘᴀɪᴅ</u>.</b>\n")
                  ),
                    reply_markup=InlineKeyboardMarkup([
                     [
