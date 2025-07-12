@@ -152,14 +152,17 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 'timestamp': datetime.now()
             }
             
-            # Show UPI options
+            # Show payment options with Amazon Gift Card as third option
             await query.message.edit_text(
-                f"Plan: {days} Days - ₹{price}\n\n"
-                f"Select Payment Method:",
+                f"<b>Plan: {days} Days - ₹{price}</b>\n\n"
+                f"<b>Select Payment Method:</b>",
                 reply_markup=InlineKeyboardMarkup([
                     [
                         InlineKeyboardButton("UPI 1", callback_data=f"upi1_{days}_{price}"),
                         InlineKeyboardButton("UPI 2", callback_data=f"upi2_{days}_{price}")
+                    ],
+                    [
+                        InlineKeyboardButton("Amazon Gift Card", callback_data=f"amazon_{days}_{price}")
                     ],
                     [
                         InlineKeyboardButton("❌ Cancel", callback_data="premium")
@@ -188,13 +191,13 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                         chat_id=query.message.chat.id,
                         photo=qr_image,
                         caption=(
-                            f"Plan: {days} Days - ₹{price}\n"
-                            f"Payment Method: UPI 1\n\n"
-                            f"📝 Instructions:\n"
-                            f"1. Scan the QR code above or pay to UPI ID\n"
-                            f"2. Pay exactly ₹{price}.\n"
-                            f"3. Click On I Have Paid.\n\n"
-                            f"Note: If You Make Payment At Night After 11 Pm Than You Have To Wait For Morning Because Owner Is Sleeping That's Why He Can't Active Your Premium If Owner Is Online Than Your Premium Will Active In A Hour So Pay At Your Own Risk After Night 11 Pm Don't Blame Owner."
+                            f"<b>Plan: {days} Days - ₹{price}</b>\n"
+                            f"<b>Payment Method: UPI 1</b>\n\n"
+                            f"<b>📝 Instructions:</b>\n"
+                            f"1. <b>Scan the QR code above or pay to UPI ID</b>\n"
+                            f"2. <b>Pay exactly ₹{price}.</b>\n"
+                            f"3. <b>Click On I Have Paid.</b>\n\n"
+                            f"<b>Note:</b> If You Make Payment At Night After 11 Pm Than You Have To Wait For Morning Because Owner Is Sleeping That's Why He Can't Active Your Premium If Owner Is Online Than Your Premium Will Active In A Hour So Pay At Your Own Risk After Night 11 Pm Don't Blame Owner."
                         ),
                         reply_markup=InlineKeyboardMarkup([
                             [
@@ -230,13 +233,13 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                         chat_id=query.message.chat.id,
                         photo=qr_image,
                         caption=(
-                            f"Plan: {days} Days - ₹{price}\n"
-                            f"Payment Method: UPI 2\n\n"
-                            f"📝 Instructions:\n"
-                            f"1. Scan the QR code above or pay to UPI ID\n"
-                            f"2. Pay exactly ₹{price}.\n"
-                            f"3. Click On I Have Paid.\n\n"
-                            f"Note: If You Make Payment At Night After 11 Pm Than You Have To Wait For Morning Because Owner Is Sleeping That's Why He Can't Active Your Premium If Owner Is Online Than Your Premium Will Active In A Hour So Pay At Your Own Risk After Night 11 Pm Don't Blame Owner."
+                            f"<b>Plan: {days} Days - ₹{price}</b>\n"
+                            f"<b>Payment Method: UPI 2</b>\n\n"
+                            f"<b>📝 Instructions:</b>\n"
+                            f"1. <b>Scan the QR code above or pay to UPI ID</b>\n"
+                            f"2. <b>Pay exactly ₹{price}.</b>\n"
+                            f"3. <b>Click On I Have Paid.</b>\n\n"
+                            f"<b>Note:</b> If You Make Payment At Night After 11 Pm Than You Have To Wait For Morning Because Owner Is Sleeping That's Why He Can't Active Your Premium If Owner Is Online Than Your Premium Will Active In A Hour So Pay At Your Own Risk After Night 11 Pm Don't Blame Owner."
                         ),
                         reply_markup=InlineKeyboardMarkup([
                             [
@@ -251,7 +254,33 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             else:
                 await query.answer("Failed to generate QR code. Please try again.", show_alert=True)
 
-    # Handle "I Have Paid" button click for both UPI 1 and UPI 2
+    # Handle Amazon Gift Card selection
+    elif data.startswith("amazon_"):
+        parts = data.split("_")
+        if len(parts) == 3:
+            days = parts[1]
+            price = parts[2]
+            
+            await query.message.edit_text(
+                f"<b>Plan: {days} Days - ₹{price}</b>\n"
+                f"<b>Payment Method: Amazon Gift Card</b>\n\n"
+                f"<b>📝 Instructions:</b>\n"
+                f"1. <b>Purchase an Amazon Gift Card for exactly ₹{price}</b>\n"
+                f"2. <b>You can send either:</b>\n"
+                f"   - <b>Screenshot of the gift card</b>\n"
+                f"   - <b>Gift card claim code</b>\n"
+                f"   - <b>Or a direct link like: https://www.amazon.in/g/GBA1CP04C2947E8O?ref=gc_utyp</b>\n\n"
+                f"3. <b>Click 'Send Gift Card' below when ready</b>\n\n"
+                f"<b>Note:</b> If You Make Payment At Night After 11 Pm Than You Have To Wait For Morning Because Owner Is Sleeping That's Why He Can't Active Your Premium If Owner Is Online Than Your Premium Will Active In A Hour So Pay At Your Own Risk After Night 11 Pm Don't Blame Owner.",
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("Send Gift Card", callback_data=f"paid_amazon_{days}_{price}"),
+                        InlineKeyboardButton("Back", callback_data=f"plan_{days}_{price}")
+                    ]
+                ])
+            )
+
+    # Handle "I Have Paid" button click for UPI methods
     elif data.startswith("paid_upi1_") or data.startswith("paid_upi2_"):
         parts = data.split("_")
         if len(parts) == 4:
@@ -268,7 +297,29 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             }
             
             await query.message.edit_text(
-                "📸 Please send your payment screenshot for verification.",
+                "<b>📸 Please send your payment screenshot for verification.</b>",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("❌ Cancel", callback_data="premium")]
+                ])
+            )
+
+    # Handle "Send Gift Card" button click for Amazon
+    elif data.startswith("paid_amazon_"):
+        parts = data.split("_")
+        if len(parts) == 4:
+            days = parts[2]
+            price = parts[3]
+            
+            # Store user in waiting list
+            waiting_for_screenshot[query.from_user.id] = {
+                'days': days,
+                'price': price,
+                'upi_method': 'amazon',
+                'timestamp': datetime.now()
+            }
+            
+            await query.message.edit_text(
+                "<b>📸 Please send your Amazon Gift Card (screenshot, claim code, or link).</b>",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("❌ Cancel", callback_data="premium")]
                 ])
@@ -286,10 +337,10 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             
             if success:
                 await query.message.edit_text(
-                    f"✅ Premium activated successfully!\n\n"
-                    f"Plan: {days} Days\n"
-                    f"Expires: {expiration_time.strftime('%Y-%m-%d %H:%M:%S')} IST\n\n"
-                    f"Enjoy your premium features! 🎉",
+                    f"<b>✅ Premium activated successfully!</b>\n\n"
+                    f"<b>Plan: {days} Days</b>\n"
+                    f"<b>Expires: {expiration_time.strftime('%Y-%m-%d %H:%M:%S')} IST</b>\n\n"
+                    f"<b>Enjoy your premium features! 🎉</b>",
                     reply_markup=InlineKeyboardMarkup([
                         [InlineKeyboardButton("🏠 Home", callback_data="start")]
                     ])
@@ -329,12 +380,12 @@ async def cb_handler(client: Bot, query: CallbackQuery):
     elif data == "close":
         await query.message.delete()
 
-# Handle screenshot uploads
-@Bot.on_message(filters.photo & filters.private)
-async def handle_screenshot(client: Bot, message: Message):
+# Handle screenshot and text messages for payment verification
+@Bot.on_message((filters.photo | filters.text) & filters.private)
+async def handle_payment_proof(client: Bot, message: Message):
     user_id = message.from_user.id
     
-    # Check if user is waiting for screenshot
+    # Check if user is waiting for payment proof
     if user_id in waiting_for_screenshot:
         payment_info = waiting_for_screenshot[user_id]
         
@@ -342,23 +393,43 @@ async def handle_screenshot(client: Bot, message: Message):
         user = message.from_user
         username = f"@{user.username}" if user.username else "No Username"
         
-        # Forward the screenshot with payment information as caption
-        await client.send_photo(
-            chat_id=OWNER_ID,
-            photo=message.photo.file_id,
-            caption=(
-                f"Payment Information\n\n"
-                f"Username: {username}\n"
-                f"User ID: `{user_id}`\n"
-                f"Payment Selected: {payment_info['days']} Days - {payment_info['price']} ₹\n"
-                f"Payment Method: {payment_info['upi_method'].upper()}"
+        # Prepare caption based on payment method
+        if payment_info['upi_method'] == 'amazon':
+            caption = (
+                f"<b>ᴘᴀʏᴍᴇɴᴛ ɪɴғᴏʀᴍᴀᴛɪᴏɴ</b>\n\n"
+                f"<b>ᴜsᴇʀɴᴀᴍᴇ:</b> {username}\n"
+                f"<b>ᴜsᴇʀ ɪᴅ:</b> <code>{user_id}</code>\n"
+                f"<b>ᴘᴀʏᴍᴇɴᴛ sᴇʟᴇᴄᴛᴇᴅ:</b> {payment_info['days']} ᴅᴀʏs - {payment_info['price']} ₹\n"
+                f"<b>ᴘᴀʏᴍᴇɴᴛ ᴍᴇᴛʜᴏᴅ:</b> ᴀᴍᴀᴢᴏɴ ɢɪғᴛ ᴄᴀʀᴅ\n"
+                f"<b>ᴘᴀʏᴍᴇɴᴛ ᴍᴇᴛʜᴏᴅ:</b> {payment_info['upi_method'].upper()}"
             )
-        )
+        else:
+            caption = (
+                f"<b>ᴘᴀʏᴍᴇɴᴛ ɪɴғᴏʀᴍᴀᴛɪᴏɴ</b>\n\n"
+                f"<b>ᴜsᴇʀɴᴀᴍᴇ:</b> {username}\n"
+                f"<b>ᴜsᴇʀ ɪᴅ:</b> <code>{user_id}</code>\n"
+                "<b>ᴘᴀʏᴍᴇɴᴛ sᴇʟᴇᴄᴛᴇᴅ:</b> {payment_info['days']} ᴅᴀʏs - {payment_info['price']} ₹\n"
+                f"<b>ᴜᴘɪ ᴍᴇᴛʜᴏᴅ:</b> {payment_info['upi_method'].upper()}")
+            )
+        
+        # Forward the payment proof to owner
+        if message.photo:
+            await client.send_photo(
+                chat_id=OWNER_ID,
+                photo=message.photo.file_id,
+                caption=caption
+            )
+        else:
+            await client.send_message(
+                chat_id=OWNER_ID,
+                text=f"{caption}\n\n<b>Payment Proof:</b>\n{message.text}"
+            )
         
         # Confirm to user
         await message.reply(
-            "✅ Your payment screenshot has been sent to the owner for verification.\n\n"
-            "⏳ Please wait for approval. You will be notified once your premium is activated.",
+            "<b>✅ ʏᴏᴜʀ ᴘᴀʏᴍᴇɴᴛ ᴘʀᴏᴏғ ʜᴀs ʙᴇᴇɴ sᴇɴᴛ ᴛᴏ ᴛʜᴇ ᴏᴡɴᴇʀ ғᴏʀ ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ.</b>\n\n"
+            "<b>⏳ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ ғᴏʀ ᴀᴘᴘʀᴏᴠᴀʟ. ʏᴏᴜ ᴡɪʟʟ ʙᴇ ɴᴏᴛɪғɪᴇᴅ ᴏɴᴄᴇ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ ɪs ᴀᴄᴛɪᴠᴀᴛᴇᴅ. ɪᴛ ᴡɪʟʟ ᴛᴀᴋᴇ ᴏɴᴇ ʜᴏᴜʀ ᴀᴘᴘʀᴏx ɪɴ ᴅᴀʏ ᴛɪᴍᴇ.
+</b>",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🏠 Home", callback_data="start")]
             ])
@@ -366,7 +437,3 @@ async def handle_screenshot(client: Bot, message: Message):
         
         # Remove from waiting list
         del waiting_for_screenshot[user_id]
-    
-    # If user is not waiting for screenshot, ignore the photo
-    else:
-        pass
