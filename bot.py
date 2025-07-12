@@ -27,10 +27,8 @@ async def daily_reset_task():
         pass  
 
 scheduler.add_job(daily_reset_task, "cron", hour=0, minute=0)
-#scheduler.start()
 
-
-name ="""
+name = """
  BY Yae Miko
 """
 
@@ -63,7 +61,7 @@ class Bot(Client):
         try:
             db_channel = await self.get_chat(CHANNEL_ID)
             self.db_channel = db_channel
-            test = await self.send_message(chat_id = db_channel.id, text = "Test Message")
+            test = await self.send_message(chat_id=db_channel.id, text="Test Message")
             await test.delete()
         except Exception as e:
             self.LOGGER(__name__).warning(e)
@@ -79,9 +77,10 @@ class Bot(Client):
         await app.setup()
         await web.TCPSite(app, "0.0.0.0", PORT).start()
 
-
-        try: await self.send_message(OWNER_ID, text = f"<b>𝙼𝚊𝚜𝚝𝚎𝚛 𝚈𝚘𝚞𝚛 𝙱𝚘𝚝 𝙷𝚊𝚜 𝙱𝚎𝚎𝚗 𝚂𝚝𝚊𝚛𝚝𝚎𝚍!</b>")
-        except: pass
+        try: 
+            await self.send_message(OWNER_ID, text=f"<b>𝙼𝚊𝚜𝚝𝚎𝚛 𝚈𝚘𝚞𝚛 𝙱𝚘𝚝 𝙷𝚊𝚜 𝙱𝚎𝚎𝚗 𝚂𝚝𝚊𝚛𝚝𝚎𝚍!</b>")
+        except: 
+            pass
 
     async def stop(self, *args):
         await super().stop()
@@ -95,6 +94,6 @@ class Bot(Client):
         try:
             loop.run_forever()
         except KeyboardInterrupt:
-            self.LOGGER(__name__).info( "sʜᴜᴛᴛɪɴɢ ᴅᴏᴡɴ...")
+            self.LOGGER(__name__).info("sʜᴜᴛᴛɪɴɢ ᴅᴏᴡɴ...")
         finally:
             loop.run_until_complete(self.stop())
