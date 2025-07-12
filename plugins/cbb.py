@@ -12,39 +12,63 @@ from datetime import datetime, timedelta
 from pytz import timezone
 import io
 
+# Dictionary to store payment sessions
 payment_sessions = {}
+
+# Dictionary to store users waiting for screenshot
 waiting_for_screenshot = {}
 
 async def generate_upi_qr_external(upi_id, amount, plan_name="Premium"):
+    """Generate UPI QR code using external API"""
     try:
+        # Create UPI payment URL
         note = f"{plan_name} Premium Plan"
         upi_url = f"upi://pay?pa={upi_id}&pn={urllib.parse.quote(note)}&am={amount}&cu=INR&tn={urllib.parse.quote('Premium Payment')}"
+        
+        # Generate QR Code using external API
         qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={urllib.parse.quote(upi_url)}"
+        
+        print(f"Generated UPI URL: {upi_url}")
+        print(f"QR API URL: {qr_api_url}")
+        
+        # Download QR code image
         response = requests.get(qr_api_url, timeout=10)
         if response.status_code == 200:
             qr_image = io.BytesIO(response.content)
             qr_image.seek(0)
             return qr_image
         else:
+            print(f"Failed to generate QR code: {response.status_code}")
             return None
+            
     except Exception as e:
         print(f"Error generating QR code: {e}")
         return None
 
 async def add_premium_user_to_db(user_id: int, days: str):
+    """
+    Add premium user to database and return success status and expiration time
+    """
     try:
+        # Convert days to appropriate time value and unit
         if days == "test":
+            # Test plan - 1 minute
             time_value = 1
             time_unit = "m"
         else:
             time_value = int(days)
             time_unit = "d"
+
+        # Add premium using db_premium function
         expiration_time = await add_premium(user_id, time_value, time_unit)
+
         if expiration_time:
+            # Parse the expiration time string to datetime object
             ist = timezone("Asia/Kolkata")
             expiration_datetime = datetime.fromisoformat(expiration_time).astimezone(ist)
             return True, expiration_datetime
         return False, None
+
     except Exception as e:
         print(f"Error in add_premium_user_to_db: {e}")
         return False, None
@@ -83,6 +107,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             ])
         )
 
+    # Premium Message (with image)
     elif data == "premium":
         await query.message.delete()
         await client.send_photo(
@@ -112,16 +137,21 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             ])
         )
 
+    # Handle payment plans
     elif data.startswith("plan_"):
         parts = data.split("_")
         if len(parts) == 3:
             days = parts[1]
             price = parts[2]
+            
+            # Store payment session
             payment_sessions[query.from_user.id] = {
                 'days': days,
                 'price': price,
                 'timestamp': datetime.now()
             }
+            
+            # Show payment options with Amazon Gift Card as third option
             await query.message.edit_text(
                 f"<b>ᴘʟᴀɴ: {days} ᴅᴀʏs - ₹{price}</b>\n\n"
                 f"<b>sᴇʟᴇᴄᴛ ᴘᴀʏᴍᴇɴᴛ ᴍᴇᴛʜᴏᴅ</b>",
@@ -131,7 +161,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                         InlineKeyboardButton("ᴜᴘɪ 2", callback_data=f"upi2_{days}_{price}")
                     ],
                     [
-                        InlineKeyboardButton("ᴀᴍᴀᴢᴏɴᴇ ɢɪғᴛ ᴄᴀʀᴅ", callback_data=f"amazon_{days}_{price}")
+                        InlineKeyboardButton("ᴀᴍᴀᴢᴏɴ ɢɪғᴛ ᴄᴀʀᴅ", callback_data=f"amazon_{days}_{price}")
                     ],
                     [
                         InlineKeyboardButton("❌ ᴄᴀɴᴄᴇʟ", callback_data="premium")
@@ -139,15 +169,20 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 ])
             )
 
+    # Handle UPI 1 selection
     elif data.startswith("upi1_"):
         parts = data.split("_")
         if len(parts) == 3:
             days = parts[1]
             price = parts[2]
+            
+            # Generate UPI QR Code for UPI 1
             upi_id = "singhzerotwo@fam"
             amount = price
             plan_name = f"{days} Days"
+            
             qr_image = await generate_upi_qr_external(upi_id, amount, plan_name)
+            
             if qr_image:
                 try:
                     await query.message.delete()
@@ -176,15 +211,20 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             else:
                 await query.answer("Failed to generate QR code. Please try again.", show_alert=True)
 
+    # Handle UPI 2 selection
     elif data.startswith("upi2_"):
         parts = data.split("_")
         if len(parts) == 3:
             days = parts[1]
             price = parts[2]
+            
+            # Generate UPI QR Code for UPI 2
             upi_id = "7348433876@mbk"
             amount = price
             plan_name = f"{days} Days"
+            
             qr_image = await generate_upi_qr_external(upi_id, amount, plan_name)
+            
             if qr_image:
                 try:
                     await query.message.delete()
@@ -213,11 +253,13 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             else:
                 await query.answer("Failed to generate QR code. Please try again.", show_alert=True)
 
+    # Handle Amazon Gift Card selection
     elif data.startswith("amazon_"):
         parts = data.split("_")
         if len(parts) == 3:
             days = parts[1]
             price = parts[2]
+            
             await query.message.edit_text(
                 f"<b>ᴘʟᴀɴ: {days} ᴅᴀʏs - ₹{price}</b>\n"
                 f"<b>ᴘᴀʏᴍᴇɴᴛ ᴍᴇᴛʜᴏᴅ: ᴀᴍᴀᴢᴏɴ ɢɪғᴛ ᴄᴀʀᴅ</b>\n\n"
@@ -237,18 +279,22 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 ])
             )
 
+    # Handle "I Have Paid" button click for UPI methods
     elif data.startswith("paid_upi1_") or data.startswith("paid_upi2_"):
         parts = data.split("_")
         if len(parts) == 4:
-            upi_method = parts[1]
+            upi_method = parts[1]  # upi1 or upi2
             days = parts[2]
             price = parts[3]
+            
+            # Store user in waiting list
             waiting_for_screenshot[query.from_user.id] = {
                 'days': days,
                 'price': price,
                 'upi_method': upi_method,
                 'timestamp': datetime.now()
             }
+            
             await query.message.edit_text(
                 "<b>📸 ᴘʟᴇᴀsᴇ sᴇɴᴅ ʏᴏᴜʀ ᴘᴀʏᴍᴇɴᴛ sᴄʀᴇᴇɴsʜᴏᴛ ғᴏʀ ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ.</b>",
                 reply_markup=InlineKeyboardMarkup([
@@ -256,17 +302,21 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 ])
             )
 
+    # Handle "Send Gift Card" button click for Amazon
     elif data.startswith("paid_amazon_"):
         parts = data.split("_")
         if len(parts) == 4:
             days = parts[2]
             price = parts[3]
+            
+            # Store user in waiting list
             waiting_for_screenshot[query.from_user.id] = {
                 'days': days,
                 'price': price,
                 'upi_method': 'amazon',
                 'timestamp': datetime.now()
             }
+            
             await query.message.edit_text(
                 "<b>📸 ᴘʟᴇᴀsᴇ sᴇɴᴅ ʏᴏᴜʀ ᴀᴍᴀᴢᴏɴ ɢɪғᴛ ᴄᴀʀᴅ (sᴄʀᴇᴇɴsʜᴏᴛ, ᴄʟᴀɪᴍ ᴄᴏᴅᴇ, ᴏʀ ʟɪɴᴋ).</b>",
                 reply_markup=InlineKeyboardMarkup([
@@ -274,13 +324,75 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 ])
             )
 
+    # Handle Plan Purchase (Direct activation for testing)
+    elif data.startswith("buy_"):
+        parts = data.split("_")
+        if len(parts) == 3:
+            days = parts[1]
+            price = parts[2]
+            
+            # Add premium directly (for testing purposes)
+            success, expiration_time = await add_premium_user_to_db(query.from_user.id, days)
+            
+            if success:
+                await query.message.edit_text(
+                    f"<b>✅ Premium activated successfully!</b>\n\n"
+                    f"<b>Plan: {days} Days</b>\n"
+                    f"<b>Expires: {expiration_time.strftime('%Y-%m-%d %H:%M:%S')} IST</b>\n\n"
+                    f"<b>Enjoy your premium features! 🎉</b>",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🏠 Home", callback_data="start")]
+                    ])
+                )
+            else:
+                await query.answer("Failed to activate premium. Please try again.", show_alert=True)
+
+    # Handle Force Sub Channel Toggle
+    elif data.startswith("rfs_ch_"):
+        channel_id = int(data.split("_")[2])
+        current_mode = await db.get_channel_mode(channel_id)
+        new_mode = "off" if current_mode == "on" else "on"
+        
+        await db.set_channel_mode(channel_id, new_mode)
+        
+        # Update the message
+        channels = await db.show_channels()
+        buttons = []
+        for ch_id in channels:
+            try:
+                chat = await client.get_chat(ch_id)
+                mode = await db.get_channel_mode(ch_id)
+                status = "🟢" if mode == "on" else "🔴"
+                title = f"{status} {chat.title}"
+                buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
+            except:
+                buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"rfs_ch_{ch_id}")])
+
+        buttons.append([InlineKeyboardButton("Close ✖️", callback_data="close")])
+
+        await query.message.edit_text(
+            "<b>⚡ Select a channel to toggle Force-Sub Mode:</b>",
+            reply_markup=InlineKeyboardMarkup(buttons),
+            disable_web_page_preview=True
+        )
+
+    elif data == "close":
+        await query.message.delete()
+
+# Handle screenshot and text messages for payment verification
 @Bot.on_message((filters.photo | filters.text) & filters.private)
 async def handle_payment_proof(client: Bot, message: Message):
     user_id = message.from_user.id
+    
+    # Check if user is waiting for payment proof
     if user_id in waiting_for_screenshot:
         payment_info = waiting_for_screenshot[user_id]
+        
+        # Get user information
         user = message.from_user
         username = f"@{user.username}" if user.username else "No Username"
+        
+        # Prepare caption based on payment method
         if payment_info['upi_method'] == 'amazon':
             caption = (
                 f"<b>ᴘᴀʏᴍᴇɴᴛ ɪɴғᴏʀᴍᴀᴛɪᴏɴ</b>\n\n"
@@ -288,7 +400,7 @@ async def handle_payment_proof(client: Bot, message: Message):
                 f"<b>ᴜsᴇʀ ɪᴅ:</b> <code>{user_id}</code>\n"
                 f"<b>ᴘᴀʏᴍᴇɴᴛ sᴇʟᴇᴄᴛᴇᴅ:</b> {payment_info['days']} ᴅᴀʏs - {payment_info['price']} ₹\n"
                 f"<b>ᴘᴀʏᴍᴇɴᴛ ᴍᴇᴛʜᴏᴅ:</b> ᴀᴍᴀᴢᴏɴ ɢɪғᴛ ᴄᴀʀᴅ\n"
-                f"<b>ᴘᴀʏᴍᴇɴᴛ ᴍᴇᴛʜᴏᴅ:</b> {payment_info['upi_method'].upper()}"
+                f"<b>ᴘᴀʏᴍᴇɴᴛ ᴘʀᴏᴏғ:</b> {'Screenshot' if message.photo else 'Text/Code/Link'}"
             )
         else:
             caption = (
@@ -296,8 +408,10 @@ async def handle_payment_proof(client: Bot, message: Message):
                 f"<b>ᴜsᴇʀɴᴀᴍᴇ:</b> {username}\n"
                 f"<b>ᴜsᴇʀ ɪᴅ:</b> <code>{user_id}</code>\n"
                 f"<b>ᴘᴀʏᴍᴇɴᴛ sᴇʟᴇᴄᴛᴇᴅ:</b> {payment_info['days']} ᴅᴀʏs - {payment_info['price']} ₹\n"
-                f"<b>ᴜᴘɪ ᴍᴇᴛʜᴏᴅ:</b> {payment_info['upi_method'].upper()}"
+                f"<b>ᴘᴀʏᴍᴇɴᴛ ᴍᴇᴛʜᴏᴅ:</b> {payment_info['upi_method'].upper()}"
             )
+        
+        # Forward the payment proof to owner
         if message.photo:
             await client.send_photo(
                 chat_id=OWNER_ID,
@@ -309,6 +423,8 @@ async def handle_payment_proof(client: Bot, message: Message):
                 chat_id=OWNER_ID,
                 text=f"{caption}\n\n<b>Payment Proof:</b>\n{message.text}"
             )
+        
+        # Confirm to user
         await message.reply(
             "<b>✅ ʏᴏᴜʀ ᴘᴀʏᴍᴇɴᴛ ᴘʀᴏᴏғ ʜᴀs ʙᴇᴇɴ sᴇɴᴛ ᴛᴏ ᴛʜᴇ ᴏᴡɴᴇʀ ғᴏʀ ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ.</b>\n\n"
             "<b>⏳ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ ғᴏʀ ᴀᴘᴘʀᴏᴠᴀʟ. ʏᴏᴜ ᴡɪʟʟ ʙᴇ ɴᴏᴛɪғɪᴇᴅ ᴏɴᴄᴇ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ ɪs ᴀᴄᴛɪᴠᴀᴛᴇᴅ. ɪᴛ ᴡɪʟʟ ᴛᴀᴋᴇ ᴏɴᴇ ʜᴏᴜʀ ᴀᴘᴘʀᴏx ɪɴ ᴅᴀʏ ᴛɪᴍᴇ.\n"
@@ -320,6 +436,15 @@ async def handle_payment_proof(client: Bot, message: Message):
                 ]
             ])
         )
+        
+        # Remove from waiting list
         del waiting_for_screenshot[user_id]
+    
+    # If user is not waiting for screenshot, send default message
     else:
-        await message.reply("ʜᴇʟʟᴏ! ᴘʟᴇᴀsᴇ ᴜsᴇ ᴛʜᴇ ʙᴜᴛᴛᴏɴs ᴛᴏ ɴᴀᴠɪɢᴀᴛᴇ ᴛʜᴇ ʙᴏᴛ.")
+        await message.reply(
+            "<b>ʜᴇʟʟᴏ! ᴘʟᴇᴀsᴇ ᴜsᴇ ᴛʜᴇ ʙᴜᴛᴛᴏɴs ᴛᴏ ɴᴀᴠɪɢᴀᴛᴇ ᴛʜᴇ ʙᴏᴛ.</b>",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Start", callback_data="start")]
+            ])
+        )
