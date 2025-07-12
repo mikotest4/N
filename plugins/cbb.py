@@ -24,50 +24,52 @@ waiting_for_screenshot = {}
 async def generate_upi_qr(upi_id, amount, name="Premium Plan"):
     """Generate UPI QR code for payment"""
     try:
-        # Clean the UPI ID
-        upi_id = upi_id.strip()
+        print(f"Starting QR generation with UPI ID: {upi_id}, Amount: {amount}")
         
-        # Validate UPI ID format
-        if '@' not in upi_id:
-            print(f"Invalid UPI ID format: {upi_id}")
+        # Check if UPI_ID is set
+        if not upi_id or upi_id == "":
+            print("Error: UPI ID is empty or not set")
             return None
         
-        # Create UPI payment string with proper format
-        upi_params = {
-            'pa': upi_id,  # Payee Address
-            'pn': name,    # Payee Name
-            'am': str(amount),  # Amount
-            'cu': 'INR',   # Currency
-            'tn': 'Premium Plan Payment'  # Transaction Note
-        }
+        # Clean the UPI ID
+        upi_id = str(upi_id).strip()
         
-        # Build URL with proper encoding
-        upi_url = 'upi://pay?' + '&'.join([f'{k}={urllib.parse.quote(str(v))}' for k, v in upi_params.items()])
+        # Basic validation
+        if '@' not in upi_id:
+            print(f"Error: Invalid UPI ID format (missing @): {upi_id}")
+            return None
+        
+        # Create UPI payment URL
+        upi_url = f"upi://pay?pa={upi_id}&pn={name}&am={amount}&cu=INR&tn=Premium%20Payment"
         
         print(f"Generated UPI URL: {upi_url}")
         
-        # Generate QR code
+        # Generate QR code with simpler settings
         qr = qrcode.QRCode(
             version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
             box_size=10,
             border=4,
         )
+        
         qr.add_data(upi_url)
         qr.make(fit=True)
         
         # Create image
         img = qr.make_image(fill_color="black", back_color="white")
         
-        # Save to BytesIO
+        # Convert to BytesIO
         img_byte_arr = io.BytesIO()
         img.save(img_byte_arr, format='PNG')
         img_byte_arr.seek(0)
         
+        print("QR code generated successfully")
         return img_byte_arr
         
     except Exception as e:
         print(f"Error generating QR code: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 async def add_premium_user_to_db(user_id: int, days: str):
@@ -199,6 +201,9 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             days = parts[1]
             price = parts[2]
             
+            print(f"UPI 1 selected - Days: {days}, Price: {price}")
+            print(f"UPI_ID from config: {UPI_ID}")
+            
             # Generate QR code for UPI 1
             qr_image = await generate_upi_qr(UPI_ID, price, "Premium Plan")
             
@@ -226,9 +231,10 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     )
                 except Exception as e:
                     print(f"Error sending photo: {e}")
-                    await query.answer("Failed to generate QR code. Please try again.", show_alert=True)
+                    await query.answer("Failed to send QR code. Please try again.", show_alert=True)
             else:
-                await query.answer("Failed to generate QR code. Please try again.", show_alert=True)
+                print("QR image generation failed")
+                await query.answer("Failed to generate QR code. Please check your UPI ID in config.", show_alert=True)
 
     # Handle UPI 2 selection
     elif data.startswith("upi2_"):
@@ -237,8 +243,11 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             days = parts[1]
             price = parts[2]
             
-            # Generate QR code for UPI 2 (you can use a different UPI ID here)
-            qr_image = await generate_upi_qr(UPI_ID, price, "Premium Plan")  # You can change UPI_ID to UPI_ID_2 if you have a second UPI
+            print(f"UPI 2 selected - Days: {days}, Price: {price}")
+            print(f"UPI_ID from config: {UPI_ID}")
+            
+            # Generate QR code for UPI 2
+            qr_image = await generate_upi_qr(UPI_ID, price, "Premium Plan")
             
             if qr_image:
                 try:
@@ -264,9 +273,10 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     )
                 except Exception as e:
                     print(f"Error sending photo: {e}")
-                    await query.answer("Failed to generate QR code. Please try again.", show_alert=True)
+                    await query.answer("Failed to send QR code. Please try again.", show_alert=True)
             else:
-                await query.answer("Failed to generate QR code. Please try again.", show_alert=True)
+                print("QR image generation failed")
+                await query.answer("Failed to generate QR code. Please check your UPI ID in config.", show_alert=True)
 
     # Handle "I Have Paid" button click for both UPI 1 and UPI 2
     elif data.startswith("paid_upi1_") or data.startswith("paid_upi2_"):
