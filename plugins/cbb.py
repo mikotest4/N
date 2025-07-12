@@ -1,3 +1,12 @@
+#
+# Copyright (C) 2025 by Codeflix-Bots@Github, < https://github.com/Codeflix-Bots >.
+#
+# This file is part of < https://github.com/Codeflix-Bots/FileStore > project,
+# and is released under the MIT License.
+# Please see < https://github.com/Codeflix-Bots/FileStore/blob/master/LICENSE >
+#
+# All rights reserved.
+
 from pyrogram import Client
 from bot import Bot
 from config import *
@@ -98,6 +107,8 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         )
 
     elif data == "start":
+        # Clear any pending force-sub mode when starting fresh
+        await db.set_force_sub_mode(query.from_user.id, False)
         await query.message.edit_text(
             text=START_MSG.format(first=query.from_user.first_name),
             disable_web_page_preview=True,
@@ -269,7 +280,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 f"   - <b>sᴄʀᴇᴇɴsʜᴏᴛ ᴏғ ᴛʜᴇ ɢɪғᴛ ᴄᴀʀᴅ</b>\n"
                 f"   - <b>ɢɪғᴛ ᴄᴀʀᴅ ᴄʟᴀɪᴍ ᴄᴏᴅᴇ</b>\n"
                 f"   - <b>ᴏʀ ᴀ ᴅɪʀᴇᴄᴛ ʟɪɴᴋ ʟɪᴋᴇ: https://www.amazon.in/g/GBA1CP04C2947E8O?ref=gc_utyp</b>\n\n"
-                f"3. <b>ᴄʟɪᴄᴋ 'sᴇɴᴅ ɢɪғᴛ ᴄᴀʀᴅ' ʙᴇʟᴏᴡ ᴡʜᴇɴ ʀᴇᴀᴅʏ</b>\n\n"
+                f"3. <b>ᴄʟɪᴄᴋ 'sᴇɴᴛ ɢɪғᴛ ᴄᴀʀᴅ' ʙᴇʟᴏᴡ ᴡʜᴇɴ ʀᴇᴀᴅʏ</b>\n\n"
                 f"<b>ɴᴏᴛᴇ: ɪғ ʏᴏᴜ ᴍᴀᴋᴇ ᴘᴀʏᴍᴇɴᴛ ᴀᴛ ɴɪɢʜᴛ ᴀғᴛᴇʀ 11 ᴘᴍ ᴛʜᴀɴ ʏᴏᴜ ʜᴀᴠᴇ ᴛᴏ ᴡᴀɪᴛ ғᴏʀ ᴍᴏʀɴɪɴɢ ʙᴇᴄᴀᴜsᴇ ᴏᴡɴᴇʀ ɪs sʟᴇᴇᴘɪɴɢ ᴛʜᴀᴛ's ᴡʜʏ ʜᴇ ᴄᴀɴ'ᴛ ᴀᴄᴛɪᴠᴇ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ ɪғ ᴏᴡɴᴇʀ ɪs ᴏɴʟɪɴᴇ ᴛʜᴀɴ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ ᴡɪʟʟ ᴀᴄᴛɪᴠᴇ ɪɴ ᴀ ʜᴏᴜʀ sᴏ ᴘᴀʏ ᴀᴛ ʏᴏᴜʀ ᴏᴡɴ ʀɪsᴋ ᴀғᴛᴇʀ ɴɪɢʜᴛ 11 ᴘᴍ ᴅᴏɴ'ᴛ ʙʟᴀᴍᴇ ᴏᴡɴᴇʀ.</b>",
                 reply_markup=InlineKeyboardMarkup([
                     [
@@ -324,60 +335,76 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 ])
             )
 
-    # Handle Plan Purchase (Direct activation for testing)
-    elif data.startswith("buy_"):
-        parts = data.split("_")
-        if len(parts) == 3:
-            days = parts[1]
-            price = parts[2]
-            
-            # Add premium directly (for testing purposes)
-            success, expiration_time = await add_premium_user_to_db(query.from_user.id, days)
-            
-            if success:
-                await query.message.edit_text(
-                    f"<b>✅ Premium activated successfully!</b>\n\n"
-                    f"<b>Plan: {days} Days</b>\n"
-                    f"<b>Expires: {expiration_time.strftime('%Y-%m-%d %H:%M:%S')} IST</b>\n\n"
-                    f"<b>Enjoy your premium features! 🎉</b>",
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("🏠 Home", callback_data="start")]
-                    ])
-                )
-            else:
-                await query.answer("Failed to activate premium. Please try again.", show_alert=True)
+    # Handle request completion
+    elif data == "request_completed":
+        await query.message.edit_text(
+            "<b>✅ Your request has been submitted successfully!</b>\n\n"
+            "<b>You can now continue using the bot.</b>",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠 Home", callback_data="start")]
+            ])
+        )
 
     # Handle Force Sub Channel Toggle
     elif data.startswith("rfs_ch_"):
-        channel_id = int(data.split("_")[2])
-        current_mode = await db.get_channel_mode(channel_id)
-        new_mode = "off" if current_mode == "on" else "on"
-        
-        await db.set_channel_mode(channel_id, new_mode)
-        
-        # Update the message
+        cid = int(data.split("_")[2])
+        try:
+            chat = await client.get_chat(cid)
+            mode = await db.get_channel_mode(cid)
+            status = "🟢 ON" if mode == "on" else "🔴 OFF"
+            new_mode = "off" if mode == "on" else "on"
+            buttons = [
+                [InlineKeyboardButton(f"ʀᴇǫ ᴍᴏᴅᴇ {'OFF' if mode == 'on' else 'ON'}", callback_data=f"rfs_toggle_{cid}_{new_mode}")],
+                [InlineKeyboardButton("‹ ʙᴀᴄᴋ", callback_data="fsub_back")]
+            ]
+            await query.message.edit_text(
+                f"Channel: {chat.title}\nCurrent Force-Sub Mode: {status}",
+                reply_markup=InlineKeyboardMarkup(buttons)
+        except Exception:
+            await query.answer("Failed to fetch channel info", show_alert=True)
+
+    elif data.startswith("rfs_toggle_"):
+        cid, action = data.split("_")[2:]
+        cid = int(cid)
+        mode = "on" if action == "on" else "off"
+
+        await db.set_channel_mode(cid, mode)
+        await query.answer(f"Force-Sub set to {'ON' if mode == 'on' else 'OFF'}")
+
+        # Refresh the same channel's mode view
+        chat = await client.get_chat(cid)
+        status = "🟢 ON" if mode == "on" else "🔴 OFF"
+        new_mode = "off" if mode == "on" else "on"
+        buttons = [
+            [InlineKeyboardButton(f"ʀᴇǫ ᴍᴏᴅᴇ {'OFF' if mode == 'on' else 'ON'}", callback_data=f"rfs_toggle_{cid}_{new_mode}")],
+            [InlineKeyboardButton("‹ ʙᴀᴄᴋ", callback_data="fsub_back")]
+        ]
+        await query.message.edit_text(
+            f"Channel: {chat.title}\nCurrent Force-Sub Mode: {status}",
+            reply_markup=InlineKeyboardMarkup(buttons))
+
+    elif data == "fsub_back":
         channels = await db.show_channels()
         buttons = []
-        for ch_id in channels:
+        for cid in channels:
             try:
-                chat = await client.get_chat(ch_id)
-                mode = await db.get_channel_mode(ch_id)
+                chat = await client.get_chat(cid)
+                mode = await db.get_channel_mode(cid)
                 status = "🟢" if mode == "on" else "🔴"
-                title = f"{status} {chat.title}"
-                buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
+                buttons.append([InlineKeyboardButton(f"{status} {chat.title}", callback_data=f"rfs_ch_{cid}")])
             except:
-                buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"rfs_ch_{ch_id}")])
-
-        buttons.append([InlineKeyboardButton("Close ✖️", callback_data="close")])
+                continue
 
         await query.message.edit_text(
-            "<b>⚡ Select a channel to toggle Force-Sub Mode:</b>",
-            reply_markup=InlineKeyboardMarkup(buttons),
-            disable_web_page_preview=True
-        )
+            "sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ɪᴛs ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:",
+            reply_markup=InlineKeyboardMarkup(buttons))
 
     elif data == "close":
         await query.message.delete()
+        try:
+            await query.message.reply_to_message.delete()
+        except:
+            pass
 
 # Handle screenshot and text messages for payment verification
 @Bot.on_message((filters.photo | filters.text) & filters.private)
@@ -440,7 +467,30 @@ async def handle_payment_proof(client: Bot, message: Message):
         # Remove from waiting list
         del waiting_for_screenshot[user_id]
     
-    # If user is not waiting for screenshot, send default message
+    # Check if user is in force-sub mode
+    elif await db.is_force_sub_enabled(user_id):
+        # Handle request submission
+        await client.send_message(
+            chat_id=OWNER_ID,
+            text=f"<b>New Request from User</b>\n\n"
+                 f"<b>User ID:</b> <code>{user_id}</code>\n"
+                 f"<b>Username:</b> @{message.from_user.username if message.from_user.username else 'N/A'}\n"
+                 f"<b>Request:</b>\n{message.text}"
+        )
+        
+        # Clear force-sub mode for this user
+        await db.set_force_sub_mode(user_id, False)
+        
+        # Confirm to user
+        await message.reply(
+            "<b>✅ Your request has been submitted successfully!</b>\n\n"
+            "<b>You can now continue using the bot.</b>",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠 Home", callback_data="start")]
+            ])
+        )
+    
+    # If user is not waiting for anything, send default message
     else:
         await message.reply(
             "<b>ʜᴇʟʟᴏ! ᴘʟᴇᴀsᴇ ᴜsᴇ ᴛʜᴇ ʙᴜᴛᴛᴏɴs ᴛᴏ ɴᴀᴠɪɢᴀᴛᴇ ᴛʜᴇ ʙᴏᴛ.</b>",
