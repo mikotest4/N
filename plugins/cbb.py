@@ -129,8 +129,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     InlineKeyboardButton("6 Months - 599 ₹", callback_data="plan_180_599")
                 ],
                 [
-                    InlineKeyboardButton("1 Year - 999 ₹", callback_data="plan_365_999"),
-                    InlineKeyboardButton("Test Plan - 1 ₹", callback_data="plan_test_1")
+                    InlineKeyboardButton("1 Year - 999 ₹", callback_data="plan_365_999")
                 ],
                 [
                     InlineKeyboardButton("❌ Cancel", callback_data="start")
@@ -154,18 +153,18 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             
             # Show payment options with Amazon Gift Card as third option
             await query.message.edit_text(
-                f"<b>Plan: {days} Days - ₹{price}</b>\n\n"
-                f"<b>Select Payment Method:</b>",
+                f"<b>ᴘʟᴀɴ: {days} Days - ₹{price}</b>\n\n"
+                f"<b>sᴇʟᴇᴄᴛ ᴘᴀʏᴍᴇɴᴛ ᴍᴇᴛʜᴏᴅ</b>",
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("UPI 1", callback_data=f"upi1_{days}_{price}"),
-                        InlineKeyboardButton("UPI 2", callback_data=f"upi2_{days}_{price}")
+                        InlineKeyboardButton("ᴜᴘɪ 1", callback_data=f"upi1_{days}_{price}"),
+                        InlineKeyboardButton("ᴜᴘɪ 2", callback_data=f"upi2_{days}_{price}")
                     ],
                     [
-                        InlineKeyboardButton("Amazon Gift Card", callback_data=f"amazon_{days}_{price}")
+                        InlineKeyboardButton("ᴀᴍᴀᴢᴏɴᴇ ɢɪғᴛ ᴄᴀʀᴅ", callback_data=f"amazon_{days}_{price}")
                     ],
                     [
-                        InlineKeyboardButton("❌ Cancel", callback_data="premium")
+                        InlineKeyboardButton("❌ ᴄᴀɴᴄᴇʟ", callback_data="premium")
                     ]
                 ])
             )
