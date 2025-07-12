@@ -10,9 +10,36 @@ import asyncio
 from pyrogram import filters
 from datetime import datetime, timedelta
 from pytz import timezone
+import qrcode
+import io
+import base64
 
 # Dictionary to store payment sessions
 payment_sessions = {}
+
+async def generate_upi_qr(upi_id, amount, name="Premium Plan"):
+    """Generate UPI QR code for payment"""
+    try:
+        # Create UPI payment URL
+        upi_url = f"upi://pay?pa={upi_id}&pn={name}&am={amount}&cu=INR"
+        
+        # Generate QR code
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(upi_url)
+        qr.make(fit=True)
+        
+        # Create QR code image
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Convert to bytes
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format='PNG')
+        img_byte_arr.seek(0)
+        
+        return img_byte_arr.getvalue()
+    except Exception as e:
+        print(f"Error generating QR code: {e}")
+        return None
 
 async def add_premium_user_to_db(user_id: int, days: str):
     """
@@ -83,7 +110,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             chat_id=query.message.chat.id,
             photo="https://telegra.ph/file/a4e279ec76dfb285ef297-0a72f2ad5e693e628f.jpg",
             caption=(
-                f"ʜᴇʟʟᴏ 『𝚈𝚊𝚎 𝙼𝚒𝚔𝚘』❋𝄗⃝🦋 ⌞𝚆𝚊𝚛𝚕𝚘𝚛𝚍𝚜⌝ ㊋ 👋\n\n"
+                f"ʜᴇʟʟᴏ {query.from_user.first_name} 👋\n\n"
                 f"ʜᴇʀᴇ ʏᴏᴜ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ ᴍᴇᴍʙᴇʀꜱʜɪᴘ ᴏꜰ ᴛʜɪꜱ ʙᴏᴛ.\n"
                 f"ꜱᴏᴍᴇ ᴘʟᴀɴ ᴀʀᴇ ɢɪᴠᴇɴ ʙᴇʟᴏᴡ ᴄʟɪᴄᴋ ᴏɴ ᴛʜᴇᴍ ᴛᴏ ᴘʀᴏᴄᴇᴇᴅ.\n"
                 f"ɪꜰ ʏᴏᴜ ᴍᴀᴅᴇ ᴛʜᴇ ᴘᴀʏᴍᴇɴᴛ ᴀꜰᴛᴇʀ 11:00 ᴘᴍ, ᴛʜᴇ ᴏᴡɴᴇʀ ᴡɪʟʟ ᴀᴄᴛɪᴠᴀᴛᴇ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ ɪꜰ ʜᴇ ɪꜱ ᴏɴʟɪɴᴇ. ᴏᴛʜᴇʀᴡɪꜱᴇ, ɪᴛ ᴡɪʟʟ ʙᴇ ᴀᴄᴛɪᴠᴀᴛᴇᴅ ɪɴ ᴛʜᴇ ᴍᴏʀɴɪɴɢ."
@@ -130,222 +157,188 @@ async def cb_handler(client: Bot, query: CallbackQuery):
 
             plan_name = plan_names.get(days, f"{days} Days")
 
-        # Generate UPI QR Code
-        upi_id = "singhzerotwo@fam"
-        amount = price
-        note = f"{plan_name} Premium Plan"
+        # Show UPI selection instead of direct payment
+        await query.message.edit_text(
+            text=(
+                f"📋 <b>Plan Selected:</b> {plan_name} - ₹{price}\n\n"
+                f"💳 <b>Choose Your Payment Method:</b>\n\n"
+                f"Select UPI ID to proceed with payment:"
+            ),
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("UPI 1 (singhzerotwo@fam)", callback_data=f"upi1_{days}_{price}")
+                ],
+                [
+                    InlineKeyboardButton("UPI 2 (7348433876@mbk)", callback_data=f"upi2_{days}_{price}")
+                ],
+                [
+                    InlineKeyboardButton("Back", callback_data="premium")
+                ]
+            ])
+        )
 
-        # Create UPI payment URL
-        upi_url = f"upi://pay?pa={upi_id}&pn={urllib.parse.quote(note)}&am={amount}&cu=INR"
-
-        # Generate QR Code using API
-        qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={urllib.parse.quote(upi_url)}"
-
-        try:
-            await query.message.delete()
-            await client.send_photo(
-                chat_id=query.message.chat.id,
-                photo=qr_api_url,
-                caption=(
-                    f"<b>{plan_name} ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ</b>\n\n"
-                    f"<b>ᴘʀɪᴄᴇ:</b> {price} ₹\n"
-                    f"<b>ᴅᴜʀᴀᴛɪᴏɴ:</b> {plan_name}\n\n"
-                    f"<b>ᴘᴀʏᴍᴇɴᴛ ɪɴꜱᴛʀᴜᴄᴛɪᴏɴꜱ:</b>\n"
-                    f"<b>ᴘᴀʏ {price} ₹ ᴛᴏ ᴛʜᴇ ɢɪᴠᴇɴ Qʀ ᴄᴏᴅᴇ ᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ <u>I ʜᴀᴠᴇ ᴘᴀɪᴅ</u>.</b>\n"
-                    f"ɪꜰ ʏᴏᴜ ᴍᴀᴅᴇ ᴛʜᴇ ᴘᴀʏᴍᴇɴᴛ ᴀꜰᴛᴇʀ 11:00 ᴘᴍ, ᴛʜᴇ ᴏᴡɴᴇʀ ᴡɪʟʟ ᴀᴄᴛɪᴠᴀᴛᴇ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ ɪꜰ ʜᴇ ɪꜱ ᴏɴʟɪɴᴇ. ᴏᴛʜᴇʀᴡɪꜱᴇ, ɪᴛ ᴡɪʟʟ ʙᴇ ᴀᴄᴛɪᴠᴀᴛᴇᴅ ɪɴ ᴛʜᴇ ᴍᴏʀɴɪɴɢ."
-                ),
-                reply_markup=InlineKeyboardMarkup([
-                    [
-                        InlineKeyboardButton("I Have Paid", callback_data=f"paid_{days}_{price}")
-                    ],
-                    [
-                        InlineKeyboardButton("Back to Plans", callback_data="premium"),
-                        InlineKeyboardButton("Home", callback_data="start")
-                    ]
-                ])
-            )
-        except Exception as e:
-            # Fallback if QR generation fails
-            await query.message.edit_text(
-                text=(
-                    f"<b>{plan_name} ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ</b>\n\n"
-                    f"<b>ᴘʀɪᴄᴇ:</b> {price} ₹\n"
-                    f"<b>ᴅᴜʀᴀᴛɪᴏɴ:</b> {plan_name}\n\n"
-                    f"<b>ᴘᴀʏᴍᴇɴᴛ ɪɴꜱᴛʀᴜᴄᴛɪᴏɴꜱ:</b>\n"
-                    f"<b>ᴘᴀʏ {price} ₹ ᴛᴏ ᴜᴘɪ ɪᴅ:</b> singhzerotwo@fam\n\n"
-                    f"<b>Qʀ ᴄᴏᴅᴇ ɢᴇɴᴇʀᴀᴛɪᴏɴ ꜰᴀɪʟᴇᴅ. ᴘʟᴇᴀꜱᴇ ᴘᴀʏ ᴍᴀɴᴜᴀʟʟʏ.</b>\n"
-                    f"<b>ɪꜰ ʏᴏᴜ ᴍᴀᴅᴇ ᴛʜᴇ ᴘᴀʏᴍᴇɴᴛ ᴀꜰᴛᴇʀ 11:00 ᴘᴍ, ᴛʜᴇ ᴏᴡɴᴇʀ ᴡɪʟʟ ᴀᴄᴛɪᴠᴀᴛᴇ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ ɪꜰ ʜᴇ ɪꜱ ᴏɴʟɪɴᴇ. ᴏᴛʜᴇʀᴡɪꜱᴇ, ɪᴛ ᴡɪʟʟ ʙᴇ ᴀᴄᴛɪᴠᴀᴛᴇᴅ ɪɴ ᴛʜᴇ ᴍᴏʀɴɪɴɢ.</b>"
-                ),
-                reply_markup=InlineKeyboardMarkup([
-                    [
-                        InlineKeyboardButton("I Have Paid", callback_data=f"paid_{days}_{price}")
-                    ],
-                    [
-                        InlineKeyboardButton("Back to Plans", callback_data="premium"),
-                        InlineKeyboardButton("Home", callback_data="start")
-                    ]
-                ])
-            )
-
-    elif data.startswith("paid_"):
-        # Extract plan details
+    elif data.startswith("upi1_"):
+        # Extract plan details from callback data
         parts = data.split("_")
         days = parts[1]
         price = parts[2]
 
         # Plan name mapping
-        if days == "test":
-            plan_name = "Test Plan (1 Min)"
-        else:
-            plan_names = {
-                "7": "7 Days",
-                "30": "1 Month",
-                "90": "3 Months",
-                "180": "6 Months",
-                "365": "1 Year"
-            }
-            plan_name = plan_names.get(days, f"{days} Days")
-
-        # Store payment session
-        payment_sessions[query.from_user.id] = {
-            "days": days,
-            "price": price,
-            "plan_name": plan_name
+        plan_names = {
+            "7": "7 Days",
+            "30": "1 Month",
+            "90": "3 Months",
+            "180": "6 Months",
+            "365": "1 Year",
+            "test": "Test Plan (1 Min)"
         }
 
-        await query.message.edit_text(
-            text=(
-                f"<b>ᴘʟᴇᴀꜱᴇ ꜱᴇɴᴅ ʏᴏᴜʀ ᴘᴀʏᴍᴇɴᴛ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ ɴᴏᴡ.</b>\n\n"
-                f"<b>ʏᴏᴜ ʜᴀᴠᴇ 5 ᴍɪɴᴜᴛᴇꜱ ᴛᴏ ꜱᴇɴᴅ ᴛʜᴇ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ.</b>"
-            ),
-            reply_markup=InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("❌ Cancel", callback_data="premium")
-                ]
-            ])
-        )
+        plan_name = plan_names.get(days, f"{days} Days")
+
+        # Generate QR code for UPI 1
+        qr_data = await generate_upi_qr(UPI_1, price, plan_name)
+        
+        if qr_data:
+            # Send QR code image with payment details
+            await query.message.delete()
+            await client.send_photo(
+                chat_id=query.message.chat.id,
+                photo=io.BytesIO(qr_data),
+                caption=(
+                    f"📋 <b>Plan:</b> {plan_name} - ₹{price}\n"
+                    f"💳 <b>Payment Method:</b> UPI 1\n\n"
+                    f"<b>UPI ID:</b> <code>{UPI_1}</code>\n\n"
+                    f"📝 <b>Instructions:</b>\n"
+                    f"1. Scan the QR code above or pay to UPI ID\n"
+                    f"2. Pay exactly ₹{price}\n"
+                    f"3. Send payment screenshot to this chat\n"
+                    f"4. Wait for admin approval\n\n"
+                    f"<b>Note:</b> After payment, send screenshot for verification."
+                ),
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("Back to Plans", callback_data="premium")
+                    ]
+                ])
+            )
+        else:
+            # Fallback without QR code
+            await query.message.edit_text(
+                text=(
+                    f"📋 <b>Plan:</b> {plan_name} - ₹{price}\n"
+                    f"💳 <b>Payment Method:</b> UPI 1\n\n"
+                    f"<b>UPI ID:</b> <code>{UPI_1}</code>\n\n"
+                    f"📝 <b>Instructions:</b>\n"
+                    f"1. Pay to UPI ID: {UPI_1}\n"
+                    f"2. Pay exactly ₹{price}\n"
+                    f"3. Send payment screenshot to this chat\n"
+                    f"4. Wait for admin approval\n\n"
+                    f"<b>Note:</b> After payment, send screenshot for verification."
+                ),
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("Back to Plans", callback_data="premium")
+                    ]
+                ])
+            )
+
+    elif data.startswith("upi2_"):
+        # Extract plan details from callback data
+        parts = data.split("_")
+        days = parts[1]
+        price = parts[2]
+
+        # Plan name mapping
+        plan_names = {
+            "7": "7 Days",
+            "30": "1 Month",
+            "90": "3 Months",
+            "180": "6 Months",
+            "365": "1 Year",
+            "test": "Test Plan (1 Min)"
+        }
+
+        plan_name = plan_names.get(days, f"{days} Days")
+
+        # Generate QR code for UPI 2
+        qr_data = await generate_upi_qr(UPI_2, price, plan_name)
+        
+        if qr_data:
+            # Send QR code image with payment details
+            await query.message.delete()
+            await client.send_photo(
+                chat_id=query.message.chat.id,
+                photo=io.BytesIO(qr_data),
+                caption=(
+                    f"📋 <b>Plan:</b> {plan_name} - ₹{price}\n"
+                    f"💳 <b>Payment Method:</b> UPI 2\n\n"
+                    f"<b>UPI ID:</b> <code>{UPI_2}</code>\n\n"
+                    f"📝 <b>Instructions:</b>\n"
+                    f"1. Scan the QR code above or pay to UPI ID\n"
+                    f"2. Pay exactly ₹{price}\n"
+                    f"3. Send payment screenshot to this chat\n"
+                    f"4. Wait for admin approval\n\n"
+                    f"<b>Note:</b> After payment, send screenshot for verification."
+                ),
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("Back to Plans", callback_data="premium")
+                    ]
+                ])
+            )
+        else:
+            # Fallback without QR code
+            await query.message.edit_text(
+                text=(
+                    f"📋 <b>Plan:</b> {plan_name} - ₹{price}\n"
+                    f"💳 <b>Payment Method:</b> UPI 2\n\n"
+                    f"<b>UPI ID:</b> <code>{UPI_2}</code>\n\n"
+                    f"📝 <b>Instructions:</b>\n"
+                    f"1. Pay to UPI ID: {UPI_2}\n"
+                    f"2. Pay exactly ₹{price}\n"
+                    f"3. Send payment screenshot to this chat\n"
+                    f"4. Wait for admin approval\n\n"
+                    f"<b>Note:</b> After payment, send screenshot for verification."
+                ),
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("Back to Plans", callback_data="premium")
+                    ]
+                ])
+            )
 
     elif data == "close":
         await query.message.delete()
-        try:
-            await query.message.reply_to_message.delete()
-        except:
-            pass
 
     elif data.startswith("rfs_ch_"):
-        cid = int(data.split("_")[2])
-        try:
-            chat = await client.get_chat(cid)
-            mode = await db.get_channel_mode(cid)
-            status = "🟢 ᴏɴ" if mode == "on" else "🔴 ᴏғғ"
-            new_mode = "ᴏғғ" if mode == "on" else "on"
-            buttons = [
-                [InlineKeyboardButton(f"ʀᴇǫ ᴍᴏᴅᴇ {'OFF' if mode == 'on' else 'ON'}", callback_data=f"rfs_toggle_{cid}_{new_mode}")],
-                [InlineKeyboardButton("‹ ʙᴀᴄᴋ", callback_data="fsub_back")]
-            ]
-            await query.message.edit_text(
-                f"Channel: {chat.title}\nCurrent Force-Sub Mode: {status}",
-                reply_markup=InlineKeyboardMarkup(buttons)
-            )
-        except Exception:
-            await query.answer("Failed to fetch channel info", show_alert=True)
-
-    elif data.startswith("rfs_toggle_"):
-        cid, action = data.split("_")[2:]
-        cid = int(cid)
-        mode = "on" if action == "on" else "off"
-
-        await db.set_channel_mode(cid, mode)
-        await query.answer(f"Force-Sub set to {'ON' if mode == 'on' else 'OFF'}")
-
-        # Refresh the same channel's mode view
-        chat = await client.get_chat(cid)
-        status = "🟢 ON" if mode == "on" else "🔴 OFF"
-        new_mode = "off" if mode == "on" else "on"
-        buttons = [
-            [InlineKeyboardButton(f"ʀᴇǫ ᴍᴏᴅᴇ {'OFF' if mode == 'on' else 'ON'}", callback_data=f"rfs_toggle_{cid}_{new_mode}")],
-            [InlineKeyboardButton("‹ ʙᴀᴄᴋ", callback_data="fsub_back")]
-        ]
-        await query.message.edit_text(
-            f"Channel: {chat.title}\nCurrent Force-Sub Mode: {status}",
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
-
-    elif data == "fsub_back":
-        temp = await query.message.edit_text("<b><i>ᴡᴀɪᴛ ᴀ sᴇᴄ..</i></b>")
+        # Handle force sub channel toggle
+        ch_id = int(data.split("_")[-1])
+        
+        # Toggle channel mode
+        current_mode = await db.get_channel_mode(ch_id)
+        new_mode = "off" if current_mode == "on" else "on"
+        await db.set_channel_mode(ch_id, new_mode)
+        
+        # Update the display
         channels = await db.show_channels()
-
         if not channels:
-            return await temp.edit("<b>❌ No force-sub channels found.</b>")
+            return await query.message.edit("<b>❌ No force-sub channels found.</b>")
 
         buttons = []
-        for ch_id in channels:
+        for channel_id in channels:
             try:
-                chat = await client.get_chat(ch_id)
-                mode = await db.get_channel_mode(ch_id)
+                chat = await client.get_chat(channel_id)
+                mode = await db.get_channel_mode(channel_id)
                 status = "🟢" if mode == "on" else "🔴"
                 title = f"{status} {chat.title}"
-                buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
+                buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{channel_id}")])
             except:
-                buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"rfs_ch_{ch_id}")])
+                buttons.append([InlineKeyboardButton(f"⚠️ {channel_id} (Unavailable)", callback_data=f"rfs_ch_{channel_id}")])
 
         buttons.append([InlineKeyboardButton("Close ✖️", callback_data="close")])
 
-        await temp.edit(
+        await query.message.edit(
             "<b>⚡ Select a channel to toggle Force-Sub Mode:</b>",
             reply_markup=InlineKeyboardMarkup(buttons),
             disable_web_page_preview=True
         )
-
-# Handler for payment screenshots
-@Bot.on_message(filters.photo & filters.private)
-async def handle_payment_screenshot(client: Bot, message: Message):
-    user_id = message.from_user.id
-
-    # Check if user has an active payment session
-    if user_id in payment_sessions:
-        session = payment_sessions[user_id]
-
-        # Get user details
-        username = f"@{message.from_user.username}" if message.from_user.username else "No Username"
-        user_id_mono = f"<code>{user_id}</code>"
-        plan_info = f"{session['plan_name']} - {session['price']} ₹"
-
-        # Send confirmation to user
-        await message.reply_text(
-            text=(
-                f"✅ <b>ᴘᴀʏᴍᴇɴᴛ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ ʀᴇᴄᴇɪᴠᴇᴅ!</b>\n\n"
-                f"ʏᴏᴜʀ ᴘᴀʏᴍᴇɴᴛ ɪꜱ ʙᴇɪɴɢ ᴠᴇʀɪꜰɪᴇᴅ ʙʏ ᴀᴅᴍɪɴ.\n"
-                f"ʏᴏᴜ ᴡɪʟʟ ɢᴇᴛ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ ᴏɴᴄᴇ ᴠᴇʀɪꜰɪᴇᴅ.\n\n"
-                f"ᴛʜᴀɴᴋ ʏᴏᴜ ꜰᴏʀ ʏᴏᴜʀ ᴘᴜʀᴄʜᴀꜱᴇ! 🎉\n"
-                f"ɪꜰ ʏᴏᴜ ᴍᴀᴅᴇ ᴛʜᴇ ᴘᴀʏᴍᴇɴᴛ ᴀꜰᴛᴇʀ 11:00 ᴘᴍ, ᴛʜᴇ ᴏᴡɴᴇʀ ᴡɪʟʟ ᴀᴄᴛɪᴠᴀᴛᴇ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ ɪꜰ ʜᴇ ɪꜱ ᴏɴʟɪɴᴇ. ᴏᴛʜᴇʀᴡɪꜱᴇ, ɪᴛ ᴡɪʟʟ ʙᴇ ᴀᴄᴛɪᴠᴀᴛᴇᴅ ɪɴ ᴛʜᴇ ᴍᴏʀɴɪɴɢ."
-            )
-        )
-
-        # Forward screenshot to owner with payment info (NO APPROVE/REJECT BUTTONS)
-        try:
-            await client.send_photo(
-                chat_id=OWNER_ID,
-                photo=message.photo.file_id,
-                caption=(
-                    f"<b>Payment Information</b>\n\n"
-                    f"<b>Username:</b> {username}\n"
-                    f"<b>User ID:</b> {user_id_mono}\n"
-                    f"<b>Payment Selected:</b> {plan_info}\n"
-                )
-                # No reply_markup here!
-            )
-        except Exception as e:
-            await message.reply_text(
-                text=(
-                    f"⚠️ <b>Error sending to admin!</b>\n\n"
-                    f"Please contact admin manually: {OWNER_TAG}"
-                )
-            )
-
-        # Remove session after processing
-        del payment_sessions[user_id]
-
-    else:
-        # Regular photo message - ignore or handle as needed
-        pass
