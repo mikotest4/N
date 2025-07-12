@@ -409,7 +409,7 @@ async def handle_payment_proof(client: Bot, message: Message):
                 f"<b>ᴜsᴇʀɴᴀᴍᴇ:</b> {username}\n"
                 f"<b>ᴜsᴇʀ ɪᴅ:</b> <code>{user_id}</code>\n"
                 "<b>ᴘᴀʏᴍᴇɴᴛ sᴇʟᴇᴄᴛᴇᴅ:</b> {payment_info['days']} ᴅᴀʏs - {payment_info['price']} ₹\n"
-                f"<b>ᴜᴘɪ ᴍᴇᴛʜᴏᴅ:</b> {payment_info['upi_method'].upper()}")
+                f"<b>ᴜᴘɪ ᴍᴇᴛʜᴏᴅ:</b> {payment_info['upi_method'].upper()}"
             )
         
         # Forward the payment proof to owner
