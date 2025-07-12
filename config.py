@@ -9,7 +9,6 @@ TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "7540338860:AAG37_VvSjWK0vBLoZVTwL
 APP_ID = int(os.environ.get("APP_ID", "28614709")) #Your API ID from my.telegram.org
 API_HASH = os.environ.get("API_HASH", "f36fd2ee6e3d3a17c4d244ff6dc1bac8") #Your API Hash from my.telegram.org
 #--------------------------------------------
-
 CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1002583602391")) #Your db channel Id
 OWNER = os.environ.get("OWNER", "Mikoyae756") # Owner username without @
 OWNER_ID = int(os.environ.get("OWNER_ID", "7970350353")) # Owner id
@@ -24,13 +23,11 @@ TG_BOT_WORKERS = int(os.environ.get("TG_BOT_WORKERS", "200"))
 #--------------------------------------------
 START_PIC = os.environ.get("START_PIC", "https://telegra.ph/file/e159ff1c9c3e076669a91-fdb27e80269b152e44.jpg")
 FORCE_PIC = os.environ.get("FORCE_PIC", "https://telegra.ph/file/e159ff1c9c3e076669a91-fdb27e80269b152e44.jpg")
-
 #--------------------------------------------
 SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "gplinks.com")
 SHORTLINK_API = os.environ.get("SHORTLINK_API", "05161838e63ca7c62e309ca1f3f87916cab6b071")
-VERIFY_EXPIRE = int(os.environ.get('VERIFY_EXPIRE', "43200")) # Add time in seconds
+VERIFY_EXPIRE = int(os.environ.get('VERIFY_EXPIRE', "60")) # Add time in seconds
 TUT_VID = os.environ.get("TUT_VID","https://t.me/hwdownload/3")
-
 #--------------------------------------------
 HELP_TXT = "<b>ɪ ᴀᴍ ᴊᴜsᴛ ғɪʟᴇ sʜᴀʀɪɴɢ ʙᴏᴛ. ɴᴏᴛʜɪɴɢ ʜᴇʀᴇ ʏᴏᴜ ᴄᴀɴ ɢᴏ ʙᴀᴄᴋ.\nɪғ ʏᴏᴜ ᴡᴀɴᴛ ᴘᴀɪᴅ ʙᴏᴛ ʜᴏsᴛɪɴɢ ʏᴏᴜ ᴄᴀɴ ᴅᴍ ᴍᴇ ʜᴇʀᴇ @Yae_X_Miko</b>"
 ABOUT_TXT = "<b>◈ ᴄʀᴇᴀᴛᴏʀ: <a href=https://t.me/Yae_X_Miko>『𝚈𝚊𝚎 𝙼𝚒𝚔𝚘』❋𝄗⃝🦋 ⌞𝚆𝚊𝚛𝚕𝚘𝚛𝚍𝚜⌝ ㊋</a></b>"#--------------------------------------------
@@ -70,37 +67,21 @@ DISABLE_CHANNEL_BUTTON = os.environ.get("DISABLE_CHANNEL_BUTTON", None) == 'True
 #--------------------------------------------
 BOT_STATS_TEXT = "<b>BOT UPTIME</b>\n{uptime}"
 USER_REPLY_TEXT = "ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!"
-
 #==========================(BUY PREMIUM)====================#
-
 OWNER_TAG = os.environ.get("OWNER_TAG", "@Yae_X_Miko")
 UPI_ID = os.environ.get("UPI_ID", "ᴀsᴋ ғʀᴏᴍ ᴏᴡɴᴇʀ")
-QR_PIC = os.environ.get("QR_PIC", "https://telegra.ph/file/e159ff1c9c3e076669a91-fdb27e80269b152e44.jpg")
-SCREENSHOT_URL = os.environ.get("SCREENSHOT_URL", f"t.me/Yae_X_Miko")
-#--------------------------------------------
-#Time and its price
-#7 Days
-PRICE1 = os.environ.get("PRICE1", "50 ʀs")
-#1 Month
-PRICE2 = os.environ.get("PRICE2", "130 ʀs")
-#3 Month
-PRICE3 = os.environ.get("PRICE3", "299 ʀs")
-#6 Month
-PRICE4 = os.environ.get("PRICE4", "499 ʀs")
-#1 Year
-PRICE5 = os.environ.get("PRICE5", "899 ʀs")
-
-#===================(END)========================#
-
-LOG_FILE_NAME = "filesharingbot.txt"
-
+UPI_IMAGE_URL = os.environ.get("UPI_IMAGE_URL", "https://telegra.ph/file/a4e279ec76dfb285ef297-0a72f2ad5e693e628f.jpg")
+#==========================(PREMIUM PAYMENT UPI)====================#
+# UPI Payment Configuration
+UPI_1 = "singhzerotwo@fam"
+UPI_2 = "7348433876@mbk"
+#==========================(LOGGING)====================#
 logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s - %(levelname)s] - %(name)s - %(message)s",
-    datefmt='%d-%b-%y %H:%M:%S',
+    format="[%(asctime)s: %(levelname)s] %(name)s: %(message)s",
+    level=logging.WARNING,
     handlers=[
         RotatingFileHandler(
-            LOG_FILE_NAME,
+            "logs.txt",
             maxBytes=50000000,
             backupCount=10
         ),
@@ -108,8 +89,4 @@ logging.basicConfig(
     ]
 )
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
-
-
-def LOGGER(name: str) -> logging.Logger:
-    return logging.getLogger(name)
-   
+LOGGER = logging.getLogger(__name__)
