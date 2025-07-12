@@ -11,6 +11,7 @@ from pyrogram import filters
 from datetime import datetime, timedelta
 from pytz import timezone
 import qrcode
+import qrcode.constants
 import io
 import base64
 
@@ -23,23 +24,48 @@ waiting_for_screenshot = {}
 async def generate_upi_qr(upi_id, amount, name="Premium Plan"):
     """Generate UPI QR code for payment"""
     try:
-        # Create UPI payment URL
-        upi_url = f"upi://pay?pa={upi_id}&pn={name}&am={amount}&cu=INR"
+        # Clean the UPI ID
+        upi_id = upi_id.strip()
+        
+        # Validate UPI ID format
+        if '@' not in upi_id:
+            print(f"Invalid UPI ID format: {upi_id}")
+            return None
+        
+        # Create UPI payment string with proper format
+        upi_params = {
+            'pa': upi_id,  # Payee Address
+            'pn': name,    # Payee Name
+            'am': str(amount),  # Amount
+            'cu': 'INR',   # Currency
+            'tn': 'Premium Plan Payment'  # Transaction Note
+        }
+        
+        # Build URL with proper encoding
+        upi_url = 'upi://pay?' + '&'.join([f'{k}={urllib.parse.quote(str(v))}' for k, v in upi_params.items()])
+        
+        print(f"Generated UPI URL: {upi_url}")
         
         # Generate QR code
-        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=10,
+            border=4,
+        )
         qr.add_data(upi_url)
         qr.make(fit=True)
         
-        # Create QR code image
+        # Create image
         img = qr.make_image(fill_color="black", back_color="white")
         
-        # Convert to bytes IO
+        # Save to BytesIO
         img_byte_arr = io.BytesIO()
         img.save(img_byte_arr, format='PNG')
         img_byte_arr.seek(0)
         
         return img_byte_arr
+        
     except Exception as e:
         print(f"Error generating QR code: {e}")
         return None
