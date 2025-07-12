@@ -1,12 +1,3 @@
-#
-# Copyright (C) 2025 by Codeflix-Bots@Github, < https://github.com/Codeflix-Bots >.
-#
-# This file is part of < https://github.com/Codeflix-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/Codeflix-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-
 from pyrogram import Client
 from bot import Bot
 from config import *
@@ -360,6 +351,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             await query.message.edit_text(
                 f"Channel: {chat.title}\nCurrent Force-Sub Mode: {status}",
                 reply_markup=InlineKeyboardMarkup(buttons)
+            )
         except Exception:
             await query.answer("Failed to fetch channel info", show_alert=True)
 
