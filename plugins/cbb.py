@@ -34,12 +34,12 @@ async def generate_upi_qr(upi_id, amount, name="Premium Plan"):
         # Create QR code image
         img = qr.make_image(fill_color="black", back_color="white")
         
-        # Convert to bytes
+        # Convert to bytes IO
         img_byte_arr = io.BytesIO()
         img.save(img_byte_arr, format='PNG')
         img_byte_arr.seek(0)
         
-        return img_byte_arr.getvalue()
+        return img_byte_arr
     except Exception as e:
         print(f"Error generating QR code: {e}")
         return None
@@ -177,26 +177,30 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             qr_image = await generate_upi_qr(UPI_ID, price, "Premium Plan")
             
             if qr_image:
-                await query.message.delete()
-                await client.send_photo(
-                    chat_id=query.message.chat.id,
-                    photo=qr_image,
-                    caption=(
-                        f"Plan: {days} Days - ₹{price}\n"
-                        f"Payment Method: UPI 1\n\n"
-                        f"📝 Instructions:\n"
-                        f"1. Scan the QR code above or pay to UPI ID\n"
-                        f"2. Pay exactly ₹{price}.\n"
-                        f"3. Click On I Have Paid.\n\n"
-                        f"Note: If You Make Payment At Night After 11 Pm Than You Have To Wait For Morning Because Owner Is Sleeping That's Why He Can't Active Your Premium If Owner Is Online Than Your Premium Will Active In A Hour So Pay At Your Own Risk After Night 11 Pm Don't Blame Owner."
-                    ),
-                    reply_markup=InlineKeyboardMarkup([
-                        [
-                            InlineKeyboardButton("I Have Paid", callback_data=f"paid_upi1_{days}_{price}"),
-                            InlineKeyboardButton("❌ Cancel", callback_data="premium")
-                        ]
-                    ])
-                )
+                try:
+                    await query.message.delete()
+                    await client.send_photo(
+                        chat_id=query.message.chat.id,
+                        photo=qr_image,
+                        caption=(
+                            f"Plan: {days} Days - ₹{price}\n"
+                            f"Payment Method: UPI 1\n\n"
+                            f"📝 Instructions:\n"
+                            f"1. Scan the QR code above or pay to UPI ID\n"
+                            f"2. Pay exactly ₹{price}.\n"
+                            f"3. Click On I Have Paid.\n\n"
+                            f"Note: If You Make Payment At Night After 11 Pm Than You Have To Wait For Morning Because Owner Is Sleeping That's Why He Can't Active Your Premium If Owner Is Online Than Your Premium Will Active In A Hour So Pay At Your Own Risk After Night 11 Pm Don't Blame Owner."
+                        ),
+                        reply_markup=InlineKeyboardMarkup([
+                            [
+                                InlineKeyboardButton("I Have Paid", callback_data=f"paid_upi1_{days}_{price}"),
+                                InlineKeyboardButton("❌ Cancel", callback_data="premium")
+                            ]
+                        ])
+                    )
+                except Exception as e:
+                    print(f"Error sending photo: {e}")
+                    await query.answer("Failed to generate QR code. Please try again.", show_alert=True)
             else:
                 await query.answer("Failed to generate QR code. Please try again.", show_alert=True)
 
@@ -211,26 +215,30 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             qr_image = await generate_upi_qr(UPI_ID, price, "Premium Plan")  # You can change UPI_ID to UPI_ID_2 if you have a second UPI
             
             if qr_image:
-                await query.message.delete()
-                await client.send_photo(
-                    chat_id=query.message.chat.id,
-                    photo=qr_image,
-                    caption=(
-                        f"Plan: {days} Days - ₹{price}\n"
-                        f"Payment Method: UPI 2\n\n"
-                        f"📝 Instructions:\n"
-                        f"1. Scan the QR code above or pay to UPI ID\n"
-                        f"2. Pay exactly ₹{price}.\n"
-                        f"3. Click On I Have Paid.\n\n"
-                        f"Note: If You Make Payment At Night After 11 Pm Than You Have To Wait For Morning Because Owner Is Sleeping That's Why He Can't Active Your Premium If Owner Is Online Than Your Premium Will Active In A Hour So Pay At Your Own Risk After Night 11 Pm Don't Blame Owner."
-                    ),
-                    reply_markup=InlineKeyboardMarkup([
-                        [
-                            InlineKeyboardButton("I Have Paid", callback_data=f"paid_upi2_{days}_{price}"),
-                            InlineKeyboardButton("❌ Cancel", callback_data="premium")
-                        ]
-                    ])
-                )
+                try:
+                    await query.message.delete()
+                    await client.send_photo(
+                        chat_id=query.message.chat.id,
+                        photo=qr_image,
+                        caption=(
+                            f"Plan: {days} Days - ₹{price}\n"
+                            f"Payment Method: UPI 2\n\n"
+                            f"📝 Instructions:\n"
+                            f"1. Scan the QR code above or pay to UPI ID\n"
+                            f"2. Pay exactly ₹{price}.\n"
+                            f"3. Click On I Have Paid.\n\n"
+                            f"Note: If You Make Payment At Night After 11 Pm Than You Have To Wait For Morning Because Owner Is Sleeping That's Why He Can't Active Your Premium If Owner Is Online Than Your Premium Will Active In A Hour So Pay At Your Own Risk After Night 11 Pm Don't Blame Owner."
+                        ),
+                        reply_markup=InlineKeyboardMarkup([
+                            [
+                                InlineKeyboardButton("I Have Paid", callback_data=f"paid_upi2_{days}_{price}"),
+                                InlineKeyboardButton("❌ Cancel", callback_data="premium")
+                            ]
+                        ])
+                    )
+                except Exception as e:
+                    print(f"Error sending photo: {e}")
+                    await query.answer("Failed to generate QR code. Please try again.", show_alert=True)
             else:
                 await query.answer("Failed to generate QR code. Please try again.", show_alert=True)
 
