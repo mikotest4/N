@@ -333,10 +333,11 @@ async def handle_screenshot(client: Bot, message: Message):
         user = message.from_user
         username = f"@{user.username}" if user.username else "No Username"
         
-        # Forward screenshot to owner with payment info
-        await client.send_message(
+        # Forward the screenshot with payment information as caption
+        await client.send_photo(
             chat_id=OWNER_ID,
-            text=(
+            photo=message.photo.file_id,
+            caption=(
                 f"Payment Information\n\n"
                 f"Username: {username}\n"
                 f"User ID: `{user_id}`\n"
@@ -344,9 +345,6 @@ async def handle_screenshot(client: Bot, message: Message):
                 f"Payment Method: {payment_info['upi_method'].upper()}"
             )
         )
-        
-        # Forward the screenshot
-        await message.forward(OWNER_ID)
         
         # Confirm to user
         await message.reply(
