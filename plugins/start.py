@@ -287,6 +287,7 @@ async def not_joined(client: Client, message: Message):
     user_id = message.from_user.id
     buttons = []
     count = 0
+    join_request_pending = False
 
     try:
         all_channels = await db.show_channels()
@@ -296,52 +297,33 @@ async def not_joined(client: Client, message: Message):
             await message.reply_chat_action(ChatAction.TYPING)
 
             if not await is_sub(client, user_id, chat_id):
-                try:
-                    # Cache chat info
-                    if chat_id in chat_data_cache:
-                        data = chat_data_cache[chat_id]
-                    else:
-                        data = await client.get_chat(chat_id)
-                        chat_data_cache[chat_id] = data
-
-                    name = data.title
-
-                    # Try to get existing invite link first
-                    link = await db.get_invite_link(chat_id)
-                    
-                    # If no valid link exists, create a new one
-                    if not link:
-                        if mode == "on" and not data.username:
-                            invite = await client.create_chat_invite_link(
-                                chat_id=chat_id,
-                                creates_join_request=True,
-                                expire_date=None
-                            )
-                            link = invite.invite_link
-                            # Store the new link
-                            await db.store_invite_link(chat_id, link)
+                # Check if user has sent join request (pending approval)
+                if mode == "on" and await db.req_user_exist(chat_id, user_id):
+                    join_request_pending = True
+                    try:
+                        if chat_id in chat_data_cache:
+                            data = chat_data_cache[chat_id]
                         else:
+                            data = await client.get_chat(chat_id)
+                            chat_data_cache[chat_id] = data
+                        name = data.title
+                        link = await db.get_invite_link(chat_id)
+                        if not link:
                             if data.username:
                                 link = f"https://t.me/{data.username}"
                             else:
-                                invite = await client.create_chat_invite_link(
-                                    chat_id=chat_id,
-                                    expire_date=None
-                                )
+                                invite = await client.create_chat_invite_link(chat_id=chat_id, expire_date=None)
                                 link = invite.invite_link
-                                # Store the new link
                                 await db.store_invite_link(chat_id, link)
-
-                    buttons.append([InlineKeyboardButton(text=name, url=link)])
-                    count += 1
-                    await temp.edit(f"<b>{'! ' * count}</b>")
-
-                except Exception as e:
-                    print(f"Error with chat {chat_id}: {e}")
-                    return await temp.edit(
-                        f"<b>! Eʀʀᴏʀ</b>\n"
-                        f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
-                    )
+                        buttons.append([InlineKeyboardButton(text=name, url=link)])
+                        count += 1
+                        await temp.edit(f"<b>{'! ' * count}</b>")
+                    except Exception as e:
+                        print(f"Error with chat {chat_id}: {e}")
+                        return await temp.edit(
+                            f"<b>! Eʀʀᴏʀ</b>\n"
+                            f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
+                        )
 
         # Retry Button
         try:
