@@ -16,7 +16,7 @@ OWNER_ID = int(os.environ.get("OWNER_ID", "7970350353")) # Owner id
 #--------------------------------------------
 PORT = os.environ.get("PORT", "7000")
 #--------------------------------------------
-DB_URI = os.environ.get("DATABASE_URL", "mongodb+srv://Koi:aloksingh@cluster0.86wo9.mongodb.net/?retryWrites=true&w=majority")
+DB_URI = os.environ.get("DATABASE_URL", "mongodb+srv://Test:Aloksingh@cluster0.cjtpste.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 DB_NAME = os.environ.get("DATABASE_NAME", "Pookies")
 #--------------------------------------------
 BAN_SUPPORT = os.environ.get("BAN_SUPPORT", None)
